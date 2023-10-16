@@ -9,13 +9,13 @@ from karateclub.graph_embedding import Graph2Vec
 # from sklearn.ensemble import RandomForestClassifier
 # from sklearn.svm import SVC
 from sklearn.linear_model import RidgeClassifier
-# from sklearn.neural_network import MLPClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split #, GridSearchCV, LeaveOneOut, learning_curve
 from sklearn.metrics import *
 
 from master_thesis.utils.load_networks import load_networks
 
-DATASET_PATH = 'Datasets/SynapseSnap/ischemic-cortical-subjects/'
+DATASET_PATH = 'Datasets/SynapseSnap/ischemic-subjects/'
 SEED = 44       # Good seds: 44, 50, 61
 CAUSAL_COEFF_STRENGTH = 1.5
 HIDDEN_DIM = 16
@@ -63,7 +63,8 @@ if __name__ == '__main__':
     print(f"Ratio of positive samples in test: {y_test.mean()}")
 
     # Train Ridge classifier on the embeddings
-    rc = RidgeClassifier(alpha=100.)
+    # rc = RidgeClassifier(alpha=100.)
+    rc = MLPClassifier(hidden_layer_sizes=(32, 16, 8), max_iter=100, random_state=SEED)
     rc.fit(X_train, y_train)
     y_train_hat, y_test_hat = rc.predict(X_train), rc.predict(X_test)
 
