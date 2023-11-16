@@ -55,3 +55,41 @@ def load_networks(networks_dir: str, causal_coeff_strength: float = 1.5, verbose
         print(f"No of patological samples: {n_patological}")
     
     return dataset, labels, (n_control, n_patological)
+
+
+def balance_split_dataset(X, y, half_test_size, verbose: bool = False, seed: int = 42):
+
+    # Set seed for reproducibility
+    np.random.seed(seed)
+
+    # Split the dataset into control and patological
+    X_con, X_pat = X[y == 0], X[y == 1]
+
+    # Holdout the test set, keep both classes balanced by taking N of each
+    X_test = np.concatenate((X_con[-half_test_size:], X_pat[-half_test_size:]))
+    y_test = np.concatenate((np.zeros(half_test_size), np.ones(half_test_size)))
+
+    # Shuffle the test set (to avoid pattern in labels)
+    permutation = np.random.permutation(2 * half_test_size)
+    X_test, y_test = X_test[permutation], y_test[permutation]
+
+    # The rest is the training set, keep both classes balanced by resampling
+    half_train = max(len(X_con) - half_test_size, len(X_pat) - half_test_size)
+    X_train = np.concatenate((
+        X_con[np.random.choice(X_con[:-half_test_size].shape[0], size=half_train, replace=True)],
+        X_pat[np.random.choice(X_pat[:-half_test_size].shape[0], size=half_train, replace=True)]
+    ))
+    y_train = np.concatenate((np.zeros(half_train), np.ones(half_train)))
+
+    # Shuffle the train set (to avoid pattern in labels)
+    permutation = np.random.permutation(X_train.shape[0])
+    X_train, y_train = X_train[permutation], y_train[permutation]
+
+    # Print info about the dataset
+    if verbose:
+        print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+        print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
+        print(f"Ratio of positive samples in train: {y_train.mean()}")
+        print(f"Ratio of positive samples in test: {y_test.mean()}")
+    
+    return X_train, y_train, X_test, y_test
