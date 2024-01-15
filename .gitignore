@@ -1,5 +1,7 @@
 Datasets/**
+Logs/**
 *.egg-info
+master_thesis/graph_classification/Tutorial6.ipynb
 
 # Ignore all __pycache__ folders in the project
 __pycache__/
