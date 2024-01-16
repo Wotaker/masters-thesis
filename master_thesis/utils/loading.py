@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple, Union
 
 import os
 import numpy as np
@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import seaborn as sns
 import torch
+from torch import Tensor
 
 from torch_geometric.data import Data, Dataset
 
@@ -22,6 +23,8 @@ class ConnectivityDataset(Dataset):
         Regulates the strength of the causal coefficients to be considered as edges.
     causal_coeff_threshold : Optional[float]
         Explicit threshold for the causal coefficients to be considered as edges.
+    device : str
+        Device type to which the data is loaded. Choose from 'cpu', 'cuda' and 'mps', by default 'cpu'.
 
     Returns
     -------
@@ -30,7 +33,7 @@ class ConnectivityDataset(Dataset):
     """
 
     @staticmethod
-    def nx2geometric(nx_graph: nx.DiGraph) -> Data:
+    def nx2geometric(nx_graph: nx.DiGraph, label: int, device: str) -> Data:
         """
         Converts a networkx graph to a PyTorch Geometric Data object.
         """
@@ -39,13 +42,15 @@ class ConnectivityDataset(Dataset):
             x=torch.ones(len(nx_graph.nodes), 1),
             edge_index=torch.tensor(list(nx_graph.edges)).t().contiguous(),
             edge_attr=torch.tensor(list(nx.get_edge_attributes(nx_graph, 'weight').values()), dtype=torch.float),
-        )
+            y=torch.tensor([label], dtype=torch.long)
+        ).to(torch.device(device))
 
     def __init__(
             self,
             networks_dir: str,
             causal_coeff_strength: Optional[float] = None,
             causal_coeff_threshold: Optional[float] = None,
+            device: str = 'cpu'
         ):
 
         assert causal_coeff_strength is not None or causal_coeff_threshold is not None, \
@@ -72,11 +77,15 @@ class ConnectivityDataset(Dataset):
             np_networks = np.where(np.array(np_networks) < self.causal_coeff_threshold, 0, np_networks)
         
         # Convert to networkx graphs
-        self.nx_dataset = [nx.from_numpy_array(np_network, create_using=nx.DiGraph) for np_network in np_networks]
+        nx_networks = [nx.from_numpy_array(np_network, create_using=nx.DiGraph) for np_network in np_networks]
+        self.nx_dataset = [self.nx2geometric(g, l, device) for g, l in zip(nx_networks, self.labels)]
 
         # Balance of control and patological samples
         self.n_control = len(self.labels) - self.labels.sum()
         self.n_patological = self.labels.sum()
+
+        # Shuffle the dataset (to avoid pattern in labels)
+        self.shuffle()
     
     def subjects_info(self):
         return {"Control": self.n_control, "Patological": self.n_patological}
@@ -84,17 +93,24 @@ class ConnectivityDataset(Dataset):
     def weight_histogram(self, idx):
         graph = self.get(idx)
         sns.histplot(graph.edge_attr.numpy(), kde=True, bins=100)
-        plt.title(f"Subjects' {idx} weights distribution")
+        idx_label = "control" if self.labels[idx] == 0 else "patological"
+        plt.title(f"Weights distribution ({idx_label} sample)")
         plt.show()
     
-    def len(self):
+    def shuffle(self, perm: Optional[Union[Tensor, np.ndarray]] = None) -> None:
+        if perm is None:
+            perm = torch.randperm(len(self.nx_dataset))
+        self.nx_dataset = [self.nx_dataset[idx] for idx in perm]
+        self.labels = self.labels[perm]
+    
+    def len(self) -> int:
         return len(self.nx_dataset)
     
-    def get(self, idx):
-        return self.nx2geometric(self.nx_dataset[idx])
+    def get(self, idx) -> Data:
+        return self.nx_dataset[idx]
     
     def __getitem__(self, idx) -> Data:
-        return self.get(idx)
+        return self.nx_dataset[idx]
     
     def __len__(self) -> int:
         return self.len()
