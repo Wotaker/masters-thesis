@@ -9,6 +9,7 @@ import torch
 from torch import Tensor
 
 from torch_geometric.data import Data, Dataset
+from torch_geometric.transforms import LocalDegreeProfile
 
 
 class ConnectivityDataset(Dataset):
@@ -33,23 +34,28 @@ class ConnectivityDataset(Dataset):
     """
 
     @staticmethod
-    def nx2geometric(nx_graph: nx.DiGraph, label: int, device: str) -> Data:
+    def nx2geometric(nx_graph: nx.DiGraph, label: int, device: str, ldp: bool = False) -> Data:
         """
         Converts a networkx graph to a PyTorch Geometric Data object.
         """
 
-        return Data(
-            x=torch.ones(len(nx_graph.nodes), 1),
+        data = Data(
+            x= None if ldp else torch.ones(len(nx_graph.nodes), 1),
             edge_index=torch.tensor(list(nx_graph.edges)).t().contiguous(),
             edge_attr=torch.tensor(list(nx.get_edge_attributes(nx_graph, 'weight').values()), dtype=torch.float),
             y=torch.tensor([label], dtype=torch.long)
         ).to(torch.device(device))
+
+        assert data.edge_index.shape == (2, len(nx_graph.edges)), f"Edge index has wrong shape ({data.edge_index.shape})"
+
+        return LocalDegreeProfile()(data) if ldp else data
 
     def __init__(
             self,
             networks_dir: str,
             causal_coeff_strength: Optional[float] = None,
             causal_coeff_threshold: Optional[float] = None,
+            ldp: bool = False,
             device: str = 'cpu'
         ):
 
@@ -78,7 +84,7 @@ class ConnectivityDataset(Dataset):
         
         # Convert to networkx graphs
         nx_networks = [nx.from_numpy_array(np_network, create_using=nx.DiGraph) for np_network in np_networks]
-        self.nx_dataset = [self.nx2geometric(g, l, device) for g, l in zip(nx_networks, self.labels)]
+        self.nx_dataset = [self.nx2geometric(g, l, device, ldp) for g, l in zip(nx_networks, self.labels)]
 
         # Balance of control and patological samples
         self.n_control = len(self.labels) - self.labels.sum()
