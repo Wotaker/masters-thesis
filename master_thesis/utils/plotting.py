@@ -12,6 +12,7 @@ def plot_confusion_matrix(y_true, y_pred, save_path=None):
     plt.ylabel("True")
     plt.title("Confusion matrix")
     plt.savefig(save_path) if save_path else plt.show()
+    plt.clf()
 
 def plot_2d_embeddings(embeddings, labels, save_path=None):
     

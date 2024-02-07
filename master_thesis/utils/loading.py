@@ -57,6 +57,7 @@ class ConnectivityDataset(Dataset):
             causal_coeff_strength: Optional[float] = None,
             causal_coeff_threshold: Optional[float] = None,
             ldp: bool = False,
+            shuffle: bool = True,
             device: str = 'cpu'
         ):
 
@@ -93,7 +94,8 @@ class ConnectivityDataset(Dataset):
         self.n_patological = self.labels.sum()
 
         # Shuffle the dataset (to avoid pattern in labels)
-        self.shuffle()
+        if shuffle:
+            self.shuffle()
     
     def subjects_info(self):
         return {"Control": self.n_control, "Patological": self.n_patological}
