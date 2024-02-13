@@ -1,3 +1,8 @@
+"""
+Extracts .npy files from effective connectivity pipeline results directory `--input_dir`,
+and saves them in a new directory `--output_dir`.
+"""
+
 from argparse import ArgumentParser
 
 import os

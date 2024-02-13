@@ -1,68 +1,33 @@
+"""
+Script to generate a synthetic dataset of directed networks.
+"""
+
 from argparse import ArgumentParser
 from typing import Dict, List
 from copy import copy
 
 import os
 import json
-import random
 import numpy as np
 import networkx as nx
+
+from master_thesis.tools.data import scale_free_network
+
+
+NETWORK_GENERATORS = {
+    "scale_free": scale_free_network
+}
 
 
 def normalize_distribution(x: List, n: int):
     return np.array(x) / sum(x) if x else np.ones(n) / n
 
 
-def draw_network(g: nx.DiGraph, with_labels=False):
-    nx.draw(g, pos=nx.circular_layout(g), node_size=5, width=0.1, with_labels=with_labels)
-
-
-def scale_free_network(network_config: Dict, seed: int = 42) -> nx.DiGraph:
-
-    def shuffle_digraph(g: nx.DiGraph) -> nx.DiGraph:
-
-        # Collect edges
-        new_edges = []
-        for u, v in g.edges():
-            new_edges.append((u, v))
-
-        # Shuffle edges
-        random.Random(seed).shuffle(new_edges)
-
-        # Create a new graph and return it
-        return nx.DiGraph(new_edges)
-
-    # Create initial graph
-    type_initial = network_config.pop("type_initial")
-    n_initial = network_config.pop("n_initial")
-    if type_initial == "clique":
-        g_init = nx.MultiDiGraph(nx.complete_graph(9))
-    elif type_initial == "ring":
-        g_init = nx.MultiDiGraph([(i, (i+1)%n_initial) for i in range(n_initial)])
-    else:
-        print("Unsuported initial type, choose from [clique, ring]")
-        exit(1)
-    
-    # Create a scale-free directed graph
-    g = nx.scale_free_graph(**network_config, initial_graph=g_init, seed=seed)
-
-    # Convert multigraph to a simple graph
-    g = nx.DiGraph(g)
-
-    # Remove self-loops
-    g.remove_edges_from(nx.selfloop_edges(g))
-
-    # Reorder nodes
-    g = shuffle_digraph(g)
-
-    # Return
-    return g
-
-
 def generate_class_representatives(size: int, network_config: Dict, initial_seed: int):
     
-    # Get class label
+    # Get class label and network type
     label = network_config.pop("label")
+    network_type = network_config.pop("network_type")
 
     # Iterate over the number of samples
     seed = initial_seed
@@ -70,7 +35,7 @@ def generate_class_representatives(size: int, network_config: Dict, initial_seed
         seed += 1
 
         # Generate network
-        network = scale_free_network(copy(network_config), seed=seed)
+        network = NETWORK_GENERATORS[network_type](copy(network_config), seed=seed)
 
         # Save network
         np.save(
