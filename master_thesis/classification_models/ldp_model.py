@@ -1,10 +1,11 @@
 from typing import Dict, List
 
+from networkx import DiGraph
 import numpy as np
 from torch_geometric.data import Data
 from torch_geometric.transforms import LocalDegreeProfile
 
-from master_thesis.classification_models import *
+from master_thesis.classification_models.base_model import BaseModel, CLASSIC_CLASSIFIERS_MAP
 
 
 class LDPModel(BaseModel):
@@ -32,13 +33,13 @@ class LDPModel(BaseModel):
         X = np.array(X)
         return X
     
-    def fit(self, X, y):
-        X = [self.nx2geometric(x, self.device, label, x_attr=None) for x, label in zip(X, y)]
+    def fit(self, X: List[DiGraph], y: List[int]):
+        X = [self.nx2geometric(self.device, x, x_attr=None, label=label) for x, label in zip(X, y)]
         X = self._ldp_transform(X)
         self.classifier.fit(X, y)
 
-    def predict(self, X):
-        X = [self.nx2geometric(x, self.device, x_attr=None) for x in X]
+    def predict(self, X: List[DiGraph]):
+        X = [self.nx2geometric(self.device, x, x_attr=None) for x in X]
         X = self._ldp_transform(X)
         y_hat = self.classifier.predict(X)
         return y_hat

@@ -10,6 +10,7 @@ import os
 import json
 import numpy as np
 import networkx as nx
+from tqdm import tqdm
 
 from master_thesis.tools.data import scale_free_network
 
@@ -31,7 +32,7 @@ def generate_class_representatives(size: int, network_config: Dict, initial_seed
 
     # Iterate over the number of samples
     seed = initial_seed
-    for i in range(size):
+    for i in tqdm(range(size)):
         seed += 1
 
         # Generate network
@@ -39,7 +40,7 @@ def generate_class_representatives(size: int, network_config: Dict, initial_seed
 
         # Save network
         np.save(
-            os.path.join(out_dir, f"{label}_{i}.npy"),
+            os.path.join(out_dir, f"sub-{label}{i}.npy"),
             nx.to_numpy_array(network)
         )
 
@@ -70,6 +71,6 @@ if __name__ == "__main__":
         print(f"Class distribution: {class_distribution}")
 
     # Generate dataset
-    for ratio, config in zip(class_distribution, class_configs):
+    for ratio, config in tqdm(zip(class_distribution, class_configs), total=len(class_configs)):
         network_config = json.loads(open(config, "r").read())
         generate_class_representatives(int(ratio * dataset_size), network_config, seed)
