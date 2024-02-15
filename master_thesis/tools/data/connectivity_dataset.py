@@ -75,6 +75,7 @@ class ConnectivityDataset(Dataset):
         self.labels = np.array([np_file[4:7] == 'PAT' for np_file in np_files])
 
         # Load all networks to numpy networks
+        # - TODO: TAKE THE APPROPRIATE LAG INDEX!!!!
         np_networks = [np.load(os.path.join(networks_dir, np_file))[1] for np_file in np_files]
 
         # Preprocess networks

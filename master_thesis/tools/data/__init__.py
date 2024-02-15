@@ -1,1 +1,2 @@
 from master_thesis.tools.data.synthetic_networks import scale_free_network
+from master_thesis.tools.data.connectivity_dataset import ConnectivityDataset
