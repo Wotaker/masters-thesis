@@ -93,7 +93,7 @@ class BaseModel():
         return Data(
             edge_index=torch.tensor(list(nx_graph.edges)).t().contiguous(),
             x=x_attr,
-            y=torch.tensor([label], dtype=torch.long) if label else None,
+            y=torch.tensor([label], dtype=torch.long) if label is not None else None,
             num_nodes=len(nx_graph.nodes),
             num_edges=len(nx_graph.edges)
         ).to(torch.device(device))
