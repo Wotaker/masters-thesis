@@ -6,7 +6,8 @@ import networkx as nx
 class Preprocessing():
     """
     Preprocesses the effective connectivity networks. Define the parameters in the constructor and call
-    the object with the numpy networks and labels to perform the preprocessing.
+    the object with the numpy networks and labels to perform the preprocessing and convert the networks to
+    networkx format.
 
     Parameters
     ----------
