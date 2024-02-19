@@ -33,11 +33,18 @@ def generate_class_representatives(size: int, network_config: Dict, initial_seed
     # Iterate over the number of samples
     seed = initial_seed
     for i in tqdm(range(size)):
-        seed += 1
 
-        # Generate network
-        network = NETWORK_GENERATORS[network_type](copy(network_config), seed=seed)
+        done = False
+        while not done:
+            seed += 1
 
+            # Generate network
+            network = NETWORK_GENERATORS[network_type](copy(network_config), seed=seed)
+            np_network = nx.to_numpy_array(network)
+
+            # Check if network is valid
+            done = np_network.shape[0] == network_config["n"] and np_network.shape[1] == network_config["n"]
+        
         # Save network
         np.save(
             os.path.join(out_dir, f"sub-{label}{i}.npy"),

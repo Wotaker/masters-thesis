@@ -1,11 +1,13 @@
 from typing import Optional, List, Tuple
 
+import torch
 import numpy as np
 import networkx as nx
 import seaborn as sns
 import matplotlib.pyplot as plt
-
 from sklearn.metrics import confusion_matrix
+
+from master_thesis.classification_models.base_model import BaseModel, plot_confusion_matrix
 
 
 def draw_network(
@@ -20,12 +22,19 @@ def draw_network(
         node_size=node_size, width=width, with_labels=with_labels
     )
 
+def plot_weight_histogram(network: nx.DiGraph, label: int, bins: int=100):
+    weights = torch.tensor(list(nx.get_edge_attributes(network, 'weight').values()), dtype=torch.float)
+    datapoint = BaseModel.nx2geometric("cpu", network, x_attr=weights)
+    sns.histplot(datapoint.x.numpy(), kde=True, bins=bins)
+    plt.title(f"Weights distribution ({'CON' if label == 0 else 'PAT'} sample)")
+    plt.show()
+
 
 def plot_sample_networks(
     networks: List[nx.DiGraph],
     labels: List[int],
     rows: int=4,
-    figsize: Tuple[int]=(6, 12),
+    figsize: Optional[Tuple[int]]=None,
     save_path: Optional[str]=None
 ):
 
@@ -37,11 +46,14 @@ def plot_sample_networks(
     indices_con = np.random.choice(len(labels_con), rows, replace=False)
 
     # Define plot
-    fig, axes = plt.subplots(rows, 2, figsize=figsize)
+    fig, axes = plt.subplots(rows, 2, figsize=figsize if figsize else (6, 3 * rows))
     for row in range(rows):
 
         # Get axes
-        ax_pat, ax_con = axes[row, 0], axes[row, 1]
+        if rows == 1:
+            ax_pat, ax_con = axes[0], axes[1]
+        else:
+            ax_pat, ax_con = axes[row, 0], axes[row, 1]
 
         # Draw pathological sample
         draw_network(networks[indices_pat[row]], axis=ax_pat)
@@ -54,17 +66,6 @@ def plot_sample_networks(
     # Save or show plot
     plt.tight_layout()
     plt.savefig(save_path) if save_path else plt.show()
-
-
-def plot_confusion_matrix(y_true, y_pred, save_path=None):
-
-    cm = confusion_matrix(y_true, y_pred)
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-    plt.xlabel("Predicted")
-    plt.ylabel("True")
-    plt.title("Confusion matrix")
-    plt.savefig(save_path) if save_path else plt.show()
-    plt.clf()
 
 
 def plot_2d_embeddings(embeddings, labels, save_path=None):

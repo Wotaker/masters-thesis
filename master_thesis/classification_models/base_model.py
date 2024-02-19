@@ -3,14 +3,14 @@ from typing import Optional
 
 import torch
 import networkx as nx
+import seaborn as sns
+import matplotlib.pyplot as plt
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import RidgeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import *
 from torch_geometric.data import Data
-
-from master_thesis.tools.plots import plot_confusion_matrix
 
 
 CLASSIC_CLASSIFIERS_MAP = {
@@ -19,6 +19,17 @@ CLASSIC_CLASSIFIERS_MAP = {
     "ridge": RidgeClassifier,
     "random_forest": RandomForestClassifier,
 }
+
+
+def plot_confusion_matrix(y_true, y_pred, save_path=None):
+
+    cm = confusion_matrix(y_true, y_pred)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
+    plt.title("Confusion matrix")
+    plt.savefig(save_path) if save_path else plt.show()
+    plt.clf()
 
 
 def evaluate(y_gold, y_hat):
