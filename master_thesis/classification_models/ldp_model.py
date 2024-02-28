@@ -65,7 +65,7 @@ class LDPModel(BaseModel):
         X = self._ldp_transform(X)
         self.classifier.fit(X, y)
 
-    def predict(self, X: List[DiGraph]):
+    def predict(self, X: List[DiGraph]) -> np.ndarray:
         X = [self.nx2geometric(self.device, x, x_attr=None) for x in X]
         X = self._ldp_transform(X)
         y_hat = self.classifier.predict(X)

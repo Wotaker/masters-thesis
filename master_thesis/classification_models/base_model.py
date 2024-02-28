@@ -35,11 +35,11 @@ def plot_confusion_matrix(y_true, y_pred, save_path=None):
 
 def evaluate(y_gold, y_hat):
 
-    print(f"Train accuracy: {accuracy_score(y_gold, y_hat):.2f}")
-    print(f"Train recall: {recall_score(y_gold, y_hat):.2f}")
-    print(f"Train precision: {precision_score(y_gold, y_hat):.2f}")
-    print(f"Train f1: {f1_score(y_gold, y_hat):.2f}")
-    print(f"Train AUC: {roc_auc_score(y_gold, y_hat):.2f}")
+    print(f"Accuracy:  {accuracy_score(y_gold, y_hat):.2f}")
+    print(f"Recall:    {recall_score(y_gold, y_hat):.2f}")
+    print(f"Precision: {precision_score(y_gold, y_hat):.2f}")
+    print(f"f1 score:  {f1_score(y_gold, y_hat):.2f}")
+    print(f"AUC score: {roc_auc_score(y_gold, y_hat):.2f}")
     plot_confusion_matrix(y_gold, y_hat)
 
 
