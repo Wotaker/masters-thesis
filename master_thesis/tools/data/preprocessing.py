@@ -16,6 +16,8 @@ class Preprocessing():
     connection_significance_threshold : Optional[float]
         Only weights that varies more than the mean plus the significance threshold times the standard deviation
         are considered as edges.
+    undirected : bool
+        If True, the networks are converted to undirected graphs.
     
     Examples
     --------
@@ -32,6 +34,7 @@ class Preprocessing():
             self,
             connection_weight_threshold: Optional[float] = None,
             connection_significance_threshold: Optional[float] = None,
+            undirected: bool = False
         ) -> None:
 
         assert connection_weight_threshold is None or connection_significance_threshold is None, \
@@ -39,6 +42,7 @@ class Preprocessing():
         
         self.connection_weight_threshold = connection_weight_threshold
         self.connection_significance_threshold = connection_significance_threshold
+        self.undirected = undirected
 
     def __call__(self, np_networks: List[np.ndarray], labels: List[int]) -> Tuple[List[nx.DiGraph], List[int]]:
         
@@ -55,6 +59,10 @@ class Preprocessing():
 
         # Convert to networkx
         nx_networks = [nx.from_numpy_array(net, create_using=nx.DiGraph) for net in np_networks]
+
+        # Convert to undirected
+        if self.undirected:
+            nx_networks = [net.to_undirected() for net in nx_networks]
 
         # Return networkx networks and labels
         return nx_networks, labels

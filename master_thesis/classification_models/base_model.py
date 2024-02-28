@@ -11,6 +11,7 @@ from sklearn.linear_model import RidgeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import *
 from torch_geometric.data import Data
+from torch_geometric.utils.convert import from_networkx
 
 
 CLASSIC_CLASSIFIERS_MAP = {
@@ -101,13 +102,13 @@ class BaseModel():
         Converts a networkx graph to a PyTorch Geometric Data object.
         """
 
-        return Data(
-            edge_index=torch.tensor(list(nx_graph.edges)).t().contiguous(),
-            x=x_attr,
-            y=torch.tensor([label], dtype=torch.long) if label is not None else None,
-            num_nodes=len(nx_graph.nodes),
-            num_edges=len(nx_graph.edges)
-        ).to(torch.device(device))
+        data = from_networkx(nx_graph)
+        data.x = x_attr
+        data.y = torch.tensor([label], dtype=torch.long) if label is not None else None
+        data.num_nodes = len(nx_graph.nodes)
+        data.num_edges = len(nx_graph.edges)
+
+        return data.to(torch.device(device))
     
     @staticmethod
     def evaluate(y_gold, y_hat):
