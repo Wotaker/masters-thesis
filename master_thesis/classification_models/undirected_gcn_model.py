@@ -9,7 +9,7 @@ from torch_geometric.nn import GCNConv
 from torch_geometric.nn import global_mean_pool
 from torch_geometric.loader import DataLoader
 
-from master_thesis.classification_models.base_model import BaseModel
+from master_thesis.classification_models.base_model import BaseModel, EvaluationScores
 from master_thesis.classification_models.utils import LOSS_FUNCTIONS
 
 
@@ -98,6 +98,21 @@ class UndirectedGCNModel(BaseModel):
         
         return torch.cat(y_hat, dim=0).cpu().numpy()
     
+    def _log(
+            self,
+            epoch: int,
+            train_loss: float,
+            val_loss: float,
+            train_scores: EvaluationScores,
+            val_scores: EvaluationScores
+        ):
+        print(f"======= Epoch: {epoch:03d} =======")
+        print(f"    Train loss: {train_loss:.4f}")
+        print(train_scores)
+        print(f"    Validation loss: {val_loss:.4f}")
+        print(val_scores, end='\n\n')
+        
+    
     def fit(self, X: List[Graph], y: List[int]):
 
         # Define model and optimizer
@@ -113,17 +128,20 @@ class UndirectedGCNModel(BaseModel):
             ) for x, label in zip(X, y)]
         validation_size = int(len(X) * self.validation_size)
         self.train_loader = DataLoader(X[:-validation_size], batch_size=self.batch_size, shuffle=True)
-        self.validation_loader = DataLoader(X[-validation_size:], batch_size=self.batch_size, shuffle=False)
+        self.validation_loader = DataLoader(X[-validation_size:], batch_size=self.batch_size, shuffle=True)
 
         # Train model
         for epoch in range(1, self.epochs + 1):
             self._train()
             train_loss = self._test(self.train_loader)
             val_loss = self._test(self.validation_loader)
+            train_evaluation_scores = self.evaluate(y[:-validation_size], self._predict(self.train_loader))
+            val_evaluation_scores = self.evaluate(y[-validation_size:], self._predict(self.validation_loader))
 
             # Print info
             if epoch % self.print_every == 0:
-                print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}')
+                self._log(epoch, train_loss, val_loss, train_evaluation_scores, val_evaluation_scores)
+            
 
     def predict(self, X: List[Graph]) -> Array:
 

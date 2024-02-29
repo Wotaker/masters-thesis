@@ -1,10 +1,12 @@
 from abc import abstractmethod
 from typing import Optional
+from dataclasses import dataclass
 
 import torch
 import networkx as nx
 import seaborn as sns
 import matplotlib.pyplot as plt
+from numpy import ndarray as Array
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import RidgeClassifier
@@ -22,7 +24,25 @@ CLASSIC_CLASSIFIERS_MAP = {
 }
 
 
-def plot_confusion_matrix(y_true, y_pred, save_path=None):
+@dataclass
+class EvaluationScores:
+    accuracy: float
+    recall: float
+    precision: float
+    f1: float
+    auc: float
+
+    def __str__(self):
+        representation = ""
+        representation += f"Accuracy:  {self.accuracy:.2f}\n"
+        representation += f"Recall:    {self.recall:.2f}\n"
+        representation += f"Precision: {self.precision:.2f}\n"
+        representation += f"f1 score:  {self.f1:.2f}\n"
+        representation += f"AUC score: {self.auc:.2f}\n"
+        return representation
+
+
+def plot_confusion_matrix(y_true: Array, y_pred: Array, save_path: str=None):
 
     cm = confusion_matrix(y_true, y_pred)
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
@@ -30,17 +50,23 @@ def plot_confusion_matrix(y_true, y_pred, save_path=None):
     plt.ylabel("True")
     plt.title("Confusion matrix")
     plt.savefig(save_path) if save_path else plt.show()
-    plt.clf()
+    plt.clf();
 
 
-def evaluate(y_gold, y_hat):
+def evaluate(y_gold: Array, y_hat: Array, plot_cm: bool) -> EvaluationScores:
 
-    print(f"Accuracy:  {accuracy_score(y_gold, y_hat):.2f}")
-    print(f"Recall:    {recall_score(y_gold, y_hat):.2f}")
-    print(f"Precision: {precision_score(y_gold, y_hat):.2f}")
-    print(f"f1 score:  {f1_score(y_gold, y_hat):.2f}")
-    print(f"AUC score: {roc_auc_score(y_gold, y_hat):.2f}")
-    plot_confusion_matrix(y_gold, y_hat)
+    evaluation_scores = EvaluationScores(
+        accuracy=accuracy_score(y_gold, y_hat),
+        recall=recall_score(y_gold, y_hat),
+        precision=precision_score(y_gold, y_hat),
+        f1=f1_score(y_gold, y_hat),
+        auc=roc_auc_score(y_gold, y_hat),
+    )
+
+    if plot_cm:
+        plot_confusion_matrix(y_gold, y_hat)
+    
+    return evaluation_scores
 
 
 def evaluate_train_test(y_train, y_train_hat, y_test, y_test_hat):
@@ -111,8 +137,8 @@ class BaseModel():
         return data.to(torch.device(device))
     
     @staticmethod
-    def evaluate(y_gold, y_hat):
-        evaluate(y_gold, y_hat)
+    def evaluate(y_gold: Array, y_hat: Array, plot_cm: bool = False) -> EvaluationScores:
+        return evaluate(y_gold, y_hat, plot_cm=plot_cm)
 
     def predict_and_evaluate(self, X_train, y_train, X_test, y_test):
         y_train_hat = self.predict(X_train)

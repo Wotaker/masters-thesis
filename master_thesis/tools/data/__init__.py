@@ -11,8 +11,11 @@ from master_thesis.tools.data.connectivity_dataset import ConnectivityDataset
 
 def load_np_data(networks_dir: str, channel: Optional[int] = None) -> Tuple[List[np.ndarray], List[int]]:
 
+    # TODO Get rid of commented code, by extractin a mock function that returns the same class with random labels
+
     # Get filenames
     filenames = [f for f in os.listdir(networks_dir) if f.endswith(".npy")]
+    # filenames = [f for f in os.listdir(networks_dir) if f.endswith(".npy") and f.startswith("sub-CON")]
 
     # Create paths
     paths = [os.path.join(networks_dir, f) for f in filenames]
@@ -23,6 +26,8 @@ def load_np_data(networks_dir: str, channel: Optional[int] = None) -> Tuple[List
 
     # Extract labels
     labels = [int(x.split("-")[1][:3] == "PAT") for x in filenames]
+    # n_total = len(filenames)
+    # labels = [1 for _ in range(n_total // 2)] + [0 for _ in range(n_total - n_total // 2)]
 
     return np_networks, labels
 

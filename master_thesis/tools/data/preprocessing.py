@@ -34,7 +34,9 @@ class Preprocessing():
             self,
             connection_weight_threshold: Optional[float] = None,
             connection_significance_threshold: Optional[float] = None,
-            undirected: bool = False
+            undirected: bool = False,
+            shuffle: bool = True,
+            seed: Optional[int] = None
         ) -> None:
 
         assert connection_weight_threshold is None or connection_significance_threshold is None, \
@@ -43,6 +45,8 @@ class Preprocessing():
         self.connection_weight_threshold = connection_weight_threshold
         self.connection_significance_threshold = connection_significance_threshold
         self.undirected = undirected
+        self.shuffle = shuffle
+        self.seed = seed
 
     def __call__(self, np_networks: List[np.ndarray], labels: List[int]) -> Tuple[List[nx.DiGraph], List[int]]:
         
@@ -63,6 +67,15 @@ class Preprocessing():
         # Convert to undirected
         if self.undirected:
             nx_networks = [net.to_undirected() for net in nx_networks]
+        
+        # Shuffle data
+        if self.seed is not None:
+                np.random.seed(self.seed)
+        if self.shuffle:
+            idx = np.arange(len(nx_networks))
+            np.random.shuffle(idx)
+            nx_networks = [nx_networks[i] for i in idx]
+            labels = [labels[i] for i in idx]
 
         # Return networkx networks and labels
         return nx_networks, labels
