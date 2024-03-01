@@ -60,13 +60,15 @@ class GCNModel(BaseModel):
         self.validation_size = validation_size
         self.hidden_channels = hidden_channels
         self.learning_rate = learning_rate
-        self.loss = LOSS_FUNCTIONS[loss]()
+        self.loss = LOSS_FUNCTIONS[loss]
         self.epochs = epochs
         self.print_every = print_every
         self.model = None
         self.train_loader = None
         self.validation_loader = None
         self.test_loader = None
+        self.train_loss_weights = None
+        self.val_loss_weights = None
         torch.manual_seed(seed)
     
     def _train(self):
@@ -74,12 +76,12 @@ class GCNModel(BaseModel):
 
         for data in self.train_loader:  # Iterate in batches over the training dataset.
             out = self.model(data.x, data.edge_index, data.batch)  # Perform a single forward pass.
-            loss = self.loss(out, data.y)  # Compute the loss.
+            loss = self.loss(weight=self.train_loss_weights)(out, data.y)  # Compute the loss.
             loss.backward()  # Derive gradients.
             self.optimizer.step()  # Update parameters based on gradients.
             self.optimizer.zero_grad()  # Clear gradients.
     
-    def _test(self, dataloader: DataLoader) -> Tuple[float, torch.Tensor, torch.Tensor]:
+    def _test(self, dataloader: DataLoader, loss_weights: torch.Tensor) -> Tuple[float, torch.Tensor, torch.Tensor]:
         self.model.eval()
 
         preds_accum = []
@@ -87,7 +89,7 @@ class GCNModel(BaseModel):
         loss_accum = 0
         for data in dataloader:  # Iterate in batches over the training/test dataset.
             out = self.model(data.x, data.edge_index, data.batch)
-            loss = self.loss(out, data.y)  # Compute the loss.
+            loss = self.loss(weight=loss_weights)(out, data.y)  # Compute the loss.
             loss_accum += loss.item()  
             preds_accum.append(out.argmax(dim=1))
             golds_accum.append(data.y)
@@ -120,6 +122,10 @@ class GCNModel(BaseModel):
         print(train_scores)
         print(f"    Validation loss: {val_loss:.4f}")
         print(val_scores, end='\n\n')
+    
+    def _calc_loss_weights(self, y: List[int]) -> torch.Tensor:
+        class_counts = torch.bincount(torch.tensor(y))
+        return 1 / class_counts.float()
         
     
     def fit(self, X: List[Graph], y: List[int]):
@@ -136,6 +142,8 @@ class GCNModel(BaseModel):
         validation_size = int(len(X) * self.validation_size)
         self.train_loader = DataLoader(X[:-validation_size], batch_size=self.batch_size, shuffle=True)
         self.validation_loader = DataLoader(X[-validation_size:], batch_size=self.batch_size, shuffle=True)
+        self.train_loss_weights = self._calc_loss_weights(y[:-validation_size])
+        self.val_loss_weights = self._calc_loss_weights(y[-validation_size:])
 
         # Define model and optimizer
         self.model = GCN(X[0].x.shape[1], 2, self.hidden_channels).to(self.device)
@@ -144,8 +152,8 @@ class GCNModel(BaseModel):
         # Train model
         for epoch in range(1, self.epochs + 1):
             self._train()
-            train_loss, train_preds, train_golds = self._test(self.train_loader)
-            val_loss, val_preds, val_golds = self._test(self.validation_loader)
+            train_loss, train_preds, train_golds = self._test(self.train_loader, self.train_loss_weights)
+            val_loss, val_preds, val_golds = self._test(self.validation_loader, self.val_loss_weights)
             train_evaluation_scores = self.evaluate(train_golds.cpu().numpy(), train_preds.cpu().numpy())
             val_evaluation_scores = self.evaluate(val_golds.cpu().numpy(), val_preds.cpu().numpy())
 
