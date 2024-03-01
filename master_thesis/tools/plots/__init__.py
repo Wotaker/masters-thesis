@@ -42,8 +42,8 @@ def plot_sample_networks(
     labels = np.array(labels)
     labels_pat = np.where(labels == True)[0]
     labels_con = np.where(labels == False)[0]
-    indices_pat = np.random.choice(len(labels_pat), rows, replace=False)
-    indices_con = np.random.choice(len(labels_con), rows, replace=False)
+    indices_pat = np.random.choice(labels_pat, rows, replace=False)
+    indices_con = np.random.choice(labels_con, rows, replace=False)
 
     # Define plot
     fig, axes = plt.subplots(rows, 2, figsize=figsize if figsize else (6, 3 * rows))
