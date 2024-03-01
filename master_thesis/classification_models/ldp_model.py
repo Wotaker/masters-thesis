@@ -9,30 +9,7 @@ from torch_geometric.transforms import BaseTransform
 from torch_geometric.utils import degree
 
 from master_thesis.classification_models.base_model import BaseModel, CLASSIC_CLASSIFIERS_MAP
-
-
-@functional_transform('directed_local_degree_profile')
-class DirectedLocalDegreeProfile(BaseTransform):
-
-    def __init__(self):
-        from torch_geometric.nn.aggr.fused import FusedAggregation
-        self.aggr = FusedAggregation(['min', 'max', 'mean', 'std'])
-
-    def forward(self, data: Data) -> Data:
-        row, col = data.edge_index
-        N = data.num_nodes
-
-        deg_out = degree(row, N, dtype=torch.float).view(-1, 1)
-        deg_in = degree(col, N, dtype=torch.float).view(-1, 1)
-        xs = [deg_out] + self.aggr(deg_out[col], row, dim_size=N) + [deg_in] + self.aggr(deg_in[row], col, dim_size=N)
-
-        if data.x is not None:
-            data.x = data.x.view(-1, 1) if data.x.dim() == 1 else data.x
-            data.x = torch.cat([data.x] + xs, dim=-1)
-        else:
-            data.x = torch.cat(xs, dim=-1)
-
-        return data
+from master_thesis.classification_models.utils import LocalDegreeProfile
 
 
 class LDPModel(BaseModel):
@@ -55,7 +32,7 @@ class LDPModel(BaseModel):
         return x
 
     def _ldp_transform(self, X: List[Data]) -> List[Data]:
-        X = [DirectedLocalDegreeProfile()(x) for x in X]
+        X = [LocalDegreeProfile()(x) for x in X]
         X = [self._aggregate_ldp(x) for x in X]
         X = np.array(X)
         return X

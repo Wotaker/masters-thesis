@@ -1,10 +1,51 @@
 import numpy as np
-import networkit
+import torch
+from torch_geometric.data import Data
+from torch_geometric.data.datapipes import functional_transform
+from torch_geometric.transforms import BaseTransform
+from torch_geometric.utils import degree
 from networkit.centrality import Betweenness
 from networkit.distance import APSP
 from networkit.graph import Graph
 from networkit.linkprediction import JaccardIndex
 from networkit.sparsification import LocalDegreeScore
+
+
+@functional_transform('add_ones')
+class AddOnes(BaseTransform):
+    def __init__(self, dim: int = 1):
+        self.dim = dim
+
+    def forward(self, data: Data) -> Data:
+        data.x = torch.ones((data.num_nodes, self.dim), dtype=torch.float)
+        return data
+
+
+@functional_transform('agile_local_degree_profile')
+class LocalDegreeProfile(BaseTransform):
+
+    def __init__(self):
+        from torch_geometric.nn.aggr.fused import FusedAggregation
+        self.aggr = FusedAggregation(['min', 'max', 'mean', 'std'])
+
+    def forward(self, data: Data) -> Data:
+        row, col = data.edge_index
+        N = data.num_nodes
+
+        deg_out = degree(row, N, dtype=torch.float).view(-1, 1)
+        xs = [deg_out] + self.aggr(deg_out[col], row, dim_size=N)
+
+        if data.is_directed():
+            deg_in = degree(col, N, dtype=torch.float).view(-1, 1)
+            xs += [deg_in] + self.aggr(deg_in[row], col, dim_size=N)
+
+        if data.x is not None:
+            data.x = data.x.view(-1, 1) if data.x.dim() == 1 else data.x
+            data.x = torch.cat([data.x] + xs, dim=-1)
+        else:
+            data.x = torch.cat(xs, dim=-1)
+
+        return data
 
 
 def calculate_shortest_paths(graph: Graph) -> np.array:

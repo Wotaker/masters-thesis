@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from networkx import Graph
 from numpy import ndarray as Array
@@ -10,7 +10,7 @@ from torch_geometric.nn import global_mean_pool
 from torch_geometric.loader import DataLoader
 
 from master_thesis.classification_models.base_model import BaseModel, EvaluationScores
-from master_thesis.classification_models.utils import LOSS_FUNCTIONS
+from master_thesis.classification_models.utils import *
 
 
 class GCN(torch.nn.Module):
@@ -39,11 +39,12 @@ class GCN(torch.nn.Module):
         return x
 
 
-class UndirectedGCNModel(BaseModel):
+class GCNModel(BaseModel):
 
     def __init__(
             self,
             device: str = 'cpu',
+            ldp_features: bool = False,
             batch_size: int = 64,
             validation_size: float = 0.2,
             hidden_channels: int = 16,
@@ -54,6 +55,7 @@ class UndirectedGCNModel(BaseModel):
             seed: int = 42
         ):
         self.device = device
+        self.ldp_features = ldp_features
         self.batch_size = batch_size
         self.validation_size = validation_size
         self.hidden_channels = hidden_channels
@@ -77,26 +79,33 @@ class UndirectedGCNModel(BaseModel):
             self.optimizer.step()  # Update parameters based on gradients.
             self.optimizer.zero_grad()  # Clear gradients.
     
-    def _test(self, dataloader: DataLoader) -> float:
+    def _test(self, dataloader: DataLoader) -> Tuple[float, torch.Tensor, torch.Tensor]:
         self.model.eval()
 
+        preds_accum = []
+        golds_accum = []
         loss_accum = 0
         for data in dataloader:  # Iterate in batches over the training/test dataset.
             out = self.model(data.x, data.edge_index, data.batch)
             loss = self.loss(out, data.y)  # Compute the loss.
             loss_accum += loss.item()  
+            preds_accum.append(out.argmax(dim=1))
+            golds_accum.append(data.y)
+        preds_accum = torch.cat(preds_accum, dim=0)
+        golds_accum = torch.cat(golds_accum, dim=0)
         
-        return loss_accum / len(dataloader.dataset) # Normalize the loss.
+        return loss_accum / len(dataloader.dataset), preds_accum, golds_accum
     
-    def _predict(self, dataloader: DataLoader) -> Array:
+    def _predict(self, dataloader: DataLoader) -> torch.Tensor:
         self.model.eval()
 
         y_hat = []
         for data in dataloader:
             out = self.model(data.x, data.edge_index, data.batch)
             y_hat.append(out.argmax(dim=1))
+        y_hat = torch.cat(y_hat, dim=0)
         
-        return torch.cat(y_hat, dim=0).cpu().numpy()
+        return y_hat
     
     def _log(
             self,
@@ -115,28 +124,30 @@ class UndirectedGCNModel(BaseModel):
     
     def fit(self, X: List[Graph], y: List[int]):
 
-        # Define model and optimizer
-        self.model = GCN(1, 2, self.hidden_channels).to(self.device)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
-
-        # Prepare data and dataloaders
+        # Prepare data
         X = [self.nx2geometric(
                 self.device,
-                x, 
-                x_attr=torch.ones((len(x), 1), dtype=torch.float),
+                x,
                 label=label
             ) for x, label in zip(X, y)]
+        X = [LocalDegreeProfile()(x) for x in X] if self.ldp_features else [AddOnes()(x) for x in X]
+        
+        # Define dataloaders
         validation_size = int(len(X) * self.validation_size)
         self.train_loader = DataLoader(X[:-validation_size], batch_size=self.batch_size, shuffle=True)
         self.validation_loader = DataLoader(X[-validation_size:], batch_size=self.batch_size, shuffle=True)
 
+        # Define model and optimizer
+        self.model = GCN(X[0].x.shape[1], 2, self.hidden_channels).to(self.device)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
+
         # Train model
         for epoch in range(1, self.epochs + 1):
             self._train()
-            train_loss = self._test(self.train_loader)
-            val_loss = self._test(self.validation_loader)
-            train_evaluation_scores = self.evaluate(y[:-validation_size], self._predict(self.train_loader))
-            val_evaluation_scores = self.evaluate(y[-validation_size:], self._predict(self.validation_loader))
+            train_loss, train_preds, train_golds = self._test(self.train_loader)
+            val_loss, val_preds, val_golds = self._test(self.validation_loader)
+            train_evaluation_scores = self.evaluate(train_golds.cpu().numpy(), train_preds.cpu().numpy())
+            val_evaluation_scores = self.evaluate(val_golds.cpu().numpy(), val_preds.cpu().numpy())
 
             # Print info
             if epoch % self.print_every == 0:
@@ -145,16 +156,12 @@ class UndirectedGCNModel(BaseModel):
 
     def predict(self, X: List[Graph]) -> Array:
 
-        # Define model and optimizer
-        self.model = GCN(1, 2, self.hidden_channels).to(self.device)
-
         # Prepare data and dataloaders
-        X = [self.nx2geometric(
-                self.device,
-                x, 
-                x_attr=torch.ones((len(x), 1), dtype=torch.float),
-            ) for x in X]
+        X = [self.nx2geometric(self.device, x) for x in X]
+        X = [LocalDegreeProfile()(x) for x in X] if self.ldp_features else [AddOnes()(x) for x in X]
+        
+        # Define dataloaders
         self.test_loader = DataLoader(X, batch_size=self.batch_size, shuffle=False)
 
         # Make predictions
-        return self._predict(self.test_loader)
+        return self._predict(self.test_loader).cpu().numpy()

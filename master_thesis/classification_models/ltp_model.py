@@ -136,12 +136,12 @@ def _extract_single_graph_features(
     return ldp_features
 
 
-def _process_row(
-    row: Dict[str, np.ndarray],
+def _aggregate_features(
+    features_dict: Dict[str, np.ndarray],
     n_bins: int,
     log_degree: bool = False,
 ):
-    x = np.empty(len(row.keys()) * n_bins, dtype=np.float32)
+    x = np.empty(len(features_dict.keys()) * n_bins, dtype=np.float32)
 
     # features that use logarithm of values if log_degree is True
     log_features = [
@@ -160,15 +160,15 @@ def _process_row(
     col_start = 0
     col_end = n_bins
 
-    for col_name, values in row.items():
+    for feature_name, feature_values in features_dict.items():
 
-        if log_degree is True and col_name in log_features:
+        if log_degree is True and feature_name in log_features:
             # add small value to avoid problems with degree 0
-            values = np.log(values + 1e-3)
+            feature_values = np.log(feature_values + 1e-3)
         
-        values, _ = np.histogram(values, bins=n_bins, density=False)
+        feature_values, _ = np.histogram(feature_values, bins=n_bins, density=False)
 
-        x[col_start:col_end] = values
+        x[col_start:col_end] = feature_values
         col_start += n_bins
         col_end += n_bins
 
@@ -201,7 +201,7 @@ class LTPModel(BaseModel):
         self.classifier = CLASSIC_CLASSIFIERS_MAP[classifier_type](**classifier_kwargs)
 
     def _ltp_transform(self, X: List[Data]) -> List[Data]:
-        X = [_process_row(_extract_single_graph_features(
+        X = [_aggregate_features(_extract_single_graph_features(
             data=x,
             degree_sum=self.degree_sum,
             shortest_paths=self.shortest_paths,
