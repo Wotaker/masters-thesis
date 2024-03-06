@@ -2,6 +2,7 @@ from typing import List, Tuple
 
 from networkx import Graph
 from numpy import ndarray as Array
+import logging
 import torch
 from torch.nn import Linear
 import torch.nn.functional as F
@@ -117,11 +118,12 @@ class GCNModel(BaseModel):
             train_scores: EvaluationScores,
             val_scores: EvaluationScores
         ):
-        print(f"======= Epoch: {epoch:03d} =======")
-        print(f"    Train loss: {train_loss:.4f}")
-        print(train_scores)
-        print(f"    Validation loss: {val_loss:.4f}")
-        print(val_scores, end='\n\n')
+        if logging.getLogger().level <= logging.INFO:
+            print(f"======= Epoch: {epoch:03d} =======")
+            print(f"    Train loss: {train_loss:.4f}")
+            print(train_scores)
+            print(f"    Validation loss: {val_loss:.4f}")
+            print(val_scores, end='\n\n')
     
     def _calc_loss_weights(self, y: List[int]) -> torch.Tensor:
         class_counts = torch.bincount(torch.tensor(y))
