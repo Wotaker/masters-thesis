@@ -42,18 +42,18 @@ class EvaluationScores:
         return representation
 
 
-def plot_confusion_matrix(y_true: Array, y_pred: Array, save_path: str=None):
+def plot_confusion_matrix(y_true: Array, y_pred: Array, save_path: Optional[str] = None):
 
     cm = confusion_matrix(y_true, y_pred)
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
     plt.xlabel("Predicted")
     plt.ylabel("True")
     plt.title("Confusion matrix")
-    plt.savefig(save_path) if save_path else plt.show()
+    plt.savefig(save_path) if save_path else None
     plt.clf();
 
 
-def evaluate(y_gold: Array, y_hat: Array, plot_cm: bool) -> EvaluationScores:
+def evaluate(y_gold: Array, y_hat: Array, save_path: Optional[str]) -> EvaluationScores:
 
     evaluation_scores = EvaluationScores(
         accuracy=accuracy_score(y_gold, y_hat),
@@ -62,9 +62,7 @@ def evaluate(y_gold: Array, y_hat: Array, plot_cm: bool) -> EvaluationScores:
         f1=f1_score(y_gold, y_hat),
         auc=roc_auc_score(y_gold, y_hat),
     )
-
-    if plot_cm:
-        plot_confusion_matrix(y_gold, y_hat)
+    plot_confusion_matrix(y_gold, y_hat, save_path)
     
     return evaluation_scores
 
@@ -137,8 +135,8 @@ class BaseModel():
         return data.to(torch.device(device))
     
     @staticmethod
-    def evaluate(y_gold: Array, y_hat: Array, plot_cm: bool = False) -> EvaluationScores:
-        return evaluate(y_gold, y_hat, plot_cm=plot_cm)
+    def evaluate(y_gold: Array, y_hat: Array, save_path: Optional[str] = None) -> EvaluationScores:
+        return evaluate(y_gold, y_hat, save_path)
 
     def predict_and_evaluate(self, X_train, y_train, X_test, y_test):
         y_train_hat = self.predict(X_train)

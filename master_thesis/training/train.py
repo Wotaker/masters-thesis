@@ -1,10 +1,13 @@
 from typing import List, Dict, Tuple, Optional
 from argparse import ArgumentParser
 
+import datetime
+import os
 import yaml
 import logging
 import torch
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
 from sklearn.model_selection import KFold
@@ -107,10 +110,79 @@ def kfold(model_name: str, model_config: Dict, X: List[nx.DiGraph], y: List[int]
     return y_gold_train, y_hat_train, y_gold_test, y_hat_test
 
 
+def create_experiment_dir(dir_path: str, config_path: str) -> None:
+
+    # Get timestamp
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    # Create directory
+    dir_path = os.path.join(dir_path, timestamp)
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    
+    # Copy configuration file to experiment directory
+    os.system(f"cp {config_path} {os.path.join(dir_path, 'config.yaml')}")
+    
+    # Return
+    return dir_path
+
+
+def log_results(
+        results: pd.DataFrame,
+        root_dir: str,
+        dataset_name: str,
+        model_name: str,
+        y_gold_train: np.ndarray,
+        y_hat_train: np.ndarray,
+        y_gold_test: np.ndarray,
+        y_hat_test: np.ndarray
+    ):
+
+    # Create model results directory
+    model_results_dir_path = os.path.join(root_dir, f"{dataset_name}_{model_name}")
+    os.makedirs(model_results_dir_path, exist_ok=True)
+
+    # Calculate train and test metrices
+    train_metrices = BaseModel.evaluate(
+        y_gold_train,
+        y_hat_train,
+        save_path=os.path.join(model_results_dir_path, "cm_train.png")
+    )
+    test_metrices = BaseModel.evaluate(
+        y_gold_test,
+        y_hat_test,
+        save_path=os.path.join(model_results_dir_path, "cm_test.png")
+    )
+
+    # Log results
+    results = results.append({
+        "dataset": dataset_name,
+        "model": model_name,
+        "split": "train",
+        "accuracy": train_metrices.accuracy,
+        "precision": train_metrices.precision,
+        "recall": train_metrices.recall,
+        "f1": train_metrices.f1,
+        "auc": train_metrices.auc
+    }, ignore_index=True)
+    results = results.append({
+        "dataset": dataset_name,
+        "model": model_name,
+        "split": "test",
+        "accuracy": test_metrices.accuracy,
+        "precision": test_metrices.precision,
+        "recall": test_metrices.recall,
+        "f1": test_metrices.f1,
+        "auc": test_metrices.auc
+    }, ignore_index=True)
+
+    return results
+
+
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-c", "--config_path", type=str, required=True)
-    parser.add_argument("-l", "--log_path", type=Optional[str], default=None)
+    parser.add_argument("-r", "--results_dir", type=str, default="Results")
     parser.add_argument("-ll", "--log_level", type=str, default="INFO")
     args = parser.parse_args()
 
@@ -125,6 +197,11 @@ if __name__ == "__main__":
     global_seed = config["seed"]
     np.random.seed(global_seed)
     torch.manual_seed(global_seed)
+
+    # Set up results directory and results dataframe
+    experiment_dir_path = create_experiment_dir(args.results_dir, args.config_path)
+    logging.info(f"Created experiment directory at `{experiment_dir_path}`")
+    results = pd.DataFrame(columns=["dataset", "model", "split", "accuracy", "precision", "recall", "f1", "auc" ])
 
     # Loop over datasets
     for dataset_name, dataset_config in config["datasets"].items():
@@ -162,10 +239,20 @@ if __name__ == "__main__":
                               "Specify either 'holdout_size' or 'folds'. Skipping...")
                 continue
 
-            # Log results
-            # TODO: Evaluate and save results
-
-            
+            # Gather model results
+            results = log_results(
+                results,
+                experiment_dir_path,
+                dataset_name,
+                model_name,
+                y_gold_train,
+                y_hat_train,
+                y_gold_test,
+                y_hat_test
+            )
+    
+    # Save results
+    results.to_csv(os.path.join(experiment_dir_path, "results.csv"), index=False)
             
 
     
