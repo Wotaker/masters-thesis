@@ -1,0 +1,19 @@
+seed: 2137
+datasets:
+
+  stroke:
+    path: /Users/wciezobka/sano/projects/masters-thesis/Datasets/NeuroFlicksRCC/networks
+    channel: 0
+    preprocessing:
+      undirected: False
+      connection_weight_threshold: !!python/tuple [0.8, 0.999]
+    models:
+
+      GCN:
+        holdout_size: 0.2
+        hyperparameters:
+          ldp_features: True
+          learning_rate: 0.001
+          epochs: 150
+          # dropout: 0.1
+          # print_every: 30

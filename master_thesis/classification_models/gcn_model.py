@@ -18,27 +18,36 @@ DEFAULT_CHECKPOINT_DIR = "master_thesis/classification_models/checkpoints/gcn"
 
 
 class GCN(torch.nn.Module):
-    def __init__(self, num_node_features: int, num_classes: int, hidden_channels: int):
+    def __init__(
+            self,
+            num_node_features: int,
+            num_classes: int,
+            hidden_channels: int,
+            dropout: float
+        ):
         super(GCN, self).__init__()
-        self.conv1 = GCNConv(num_node_features, hidden_channels)
-        self.conv2 = GCNConv(hidden_channels, hidden_channels)
-        self.conv3 = GCNConv(hidden_channels, hidden_channels)
-        self.lin = Linear(hidden_channels, num_classes)
+        self.convIn = GCNConv(num_node_features, hidden_channels)
+        self.convHidden = GCNConv(hidden_channels, hidden_channels)
+        self.linHidden = Linear(hidden_channels, hidden_channels)
+        self.linFinal = Linear(hidden_channels, num_classes)
+        self.dropout = dropout
 
     def forward(self, x, edge_index, batch):
         # 1. Obtain node embeddings 
-        x = self.conv1(x, edge_index)
+        x = self.convIn(x, edge_index)
         x = x.relu()
-        x = self.conv2(x, edge_index)
+        x = self.convHidden(x, edge_index)
         x = x.relu()
-        x = self.conv3(x, edge_index)
+        x = self.convHidden(x, edge_index)
 
         # 2. Readout layer
         x = global_mean_pool(x, batch)  # [batch_size, hidden_channels]
 
         # 3. Apply a final classifier
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.lin(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.linHidden(x)
+        x = x.relu()
+        x = self.linFinal(x)
         
         return x
 
@@ -54,6 +63,7 @@ class GCNModel(BaseModel):
             hidden_channels: int = 16,
             learning_rate: float = 0.01,
             loss: str = 'cross_entropy',
+            dropout: float = 0.5,
             epochs: int = 100,
             print_every: int = 10,
             checkpoint_dir: Optional[str] = None,
@@ -73,6 +83,7 @@ class GCNModel(BaseModel):
         self.hidden_channels = hidden_channels
         self.learning_rate = learning_rate
         self.loss = LOSS_FUNCTIONS[loss]
+        self.dropout = dropout
         self.epochs = epochs
         self.print_every = print_every
         self.checkpoint_dir = checkpoint_dir
@@ -160,7 +171,7 @@ class GCNModel(BaseModel):
         self.val_loss_weights = self._calc_loss_weights(y[-validation_size:])
 
         # Define model and optimizer
-        self.model = GCN(X[0].x.shape[1], 2, self.hidden_channels).to(self.device)
+        self.model = GCN(X[0].x.shape[1], 2, self.hidden_channels, self.dropout).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
         # Train model
