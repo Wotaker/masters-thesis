@@ -1,5 +1,6 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
+import datetime
 from networkx import Graph
 from numpy import ndarray as Array
 import logging
@@ -12,6 +13,8 @@ from torch_geometric.loader import DataLoader
 
 from master_thesis.classification_models.base_model import BaseModel, EvaluationScores
 from master_thesis.classification_models.utils import *
+
+DEFAULT_CHECKPOINT_DIR = "master_thesis/classification_models/checkpoints/gcn"
 
 
 class GCN(torch.nn.Module):
@@ -53,8 +56,16 @@ class GCNModel(BaseModel):
             loss: str = 'cross_entropy',
             epochs: int = 100,
             print_every: int = 10,
+            checkpoint_dir: Optional[str] = None,
             seed: int = 42
         ):
+        if checkpoint_dir is None:
+            checkpoint_dir = DEFAULT_CHECKPOINT_DIR
+            checkpoint_dir = os.path.join(
+                checkpoint_dir,
+                datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            )
+
         self.device = device
         self.ldp_features = ldp_features
         self.batch_size = batch_size
@@ -64,6 +75,7 @@ class GCNModel(BaseModel):
         self.loss = LOSS_FUNCTIONS[loss]
         self.epochs = epochs
         self.print_every = print_every
+        self.checkpoint_dir = checkpoint_dir
         self.model = None
         self.train_loader = None
         self.validation_loader = None
@@ -152,6 +164,7 @@ class GCNModel(BaseModel):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
         # Train model
+        best_auc = 0.
         for epoch in range(1, self.epochs + 1):
             self._train()
             train_loss, train_preds, train_golds = self._test(self.train_loader, self.train_loss_weights)
@@ -159,12 +172,33 @@ class GCNModel(BaseModel):
             train_evaluation_scores = self.evaluate(train_golds.cpu().numpy(), train_preds.cpu().numpy())
             val_evaluation_scores = self.evaluate(val_golds.cpu().numpy(), val_preds.cpu().numpy())
 
+            # Save checkpoint
+            save_checkpoint(
+                self.model,
+                self.optimizer,
+                epoch,
+                val_evaluation_scores.auc,
+                self.checkpoint_dir,
+                val_evaluation_scores.auc > best_auc
+            )
+            best_auc = max(best_auc, val_evaluation_scores.auc)
+
             # Print info
             if epoch % self.print_every == 0:
                 self._log(epoch, train_loss, val_loss, train_evaluation_scores, val_evaluation_scores)
             
 
     def predict(self, X: List[Graph]) -> Array:
+        
+        # Load best model
+        loaded = load_checkpoint(
+            self.checkpoint_dir,
+            self.device,
+            self.model
+        )
+        if loaded is not None:
+            self.model, _, epoch, validation_metric = loaded
+            logging.info(f"Loaded model from epoch {epoch} with validation metric {validation_metric:.4f}")
 
         # Prepare data and dataloaders
         X = [self.nx2geometric(self.device, x) for x in X]
