@@ -32,7 +32,7 @@ class Preprocessing():
 
     def __init__(
             self,
-            connection_weight_threshold: Optional[float] = None,
+            connection_weight_threshold: Optional[Tuple] = None,
             connection_significance_threshold: Optional[float] = None,
             undirected: bool = False,
             shuffle: bool = True,
@@ -56,7 +56,10 @@ class Preprocessing():
         
         # Preprocess networks
         if self.connection_weight_threshold is not None:
-            np_networks = np.where(np_networks < self.connection_weight_threshold, 0, np_networks)
+            if self.connection_weight_threshold[0] is not None:
+                np_networks = np.where(np_networks < self.connection_weight_threshold[0], 0, np_networks)
+            if self.connection_weight_threshold[1] is not None:
+                np_networks = np.where(np_networks > self.connection_weight_threshold[1], 0, np_networks)
         elif self.connection_significance_threshold is not None:
             np_networks = np.where(np_networks < self.score_mean + self.connection_significance_threshold * self.score_std, 0, np_networks)
             # np_networks = np_networks > self.score_mean + self.connection_significance_threshold * self.score_std

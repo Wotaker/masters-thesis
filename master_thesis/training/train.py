@@ -191,7 +191,7 @@ if __name__ == "__main__":
 
     # Load configuration
     with open(args.config_path, 'r') as stream:
-        config = yaml.safe_load(stream)
+        config = yaml.load(stream.read(), Loader=yaml.FullLoader)
     
     # Set global seed
     global_seed = config["seed"]
