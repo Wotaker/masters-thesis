@@ -15,7 +15,6 @@ def load_np_data(networks_dir: str, channel: Optional[int] = None) -> Tuple[List
 
     # Get filenames
     filenames = [f for f in os.listdir(networks_dir) if f.endswith(".npy")]
-    # filenames = [f for f in os.listdir(networks_dir) if f.endswith(".npy") and f.startswith("sub-CON")]
 
     # Create paths
     paths = [os.path.join(networks_dir, f) for f in filenames]

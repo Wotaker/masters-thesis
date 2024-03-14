@@ -9,46 +9,52 @@ datasets:
       connection_weight_threshold: !!python/tuple [0.8, 0.995]
     models:
 
-      GCN:
-        holdout_size: 0.2
-        hyperparameters:
-          ldp_features: True
-          learning_rate: 0.001
-          epochs: 150
+      # GCN:
+      #   holdout_size: 0.2
+      #   hyperparameters:
+      #     ldp_features: True
+      #     learning_rate: 0.001
+      #     epochs: 150
 
       LTP:
         folds: 10
         hyperparameters:
           log_degree: True
+          classifier_type: "random_forest"
+          classifier_kwargs: {
+            class_weight: "balanced",
+            max_features: 5,
+            max_depth: 2
+          }
 
-      Graph2Vec:
-        folds: 10
-        hyperparameters:
-          wl_iterations: 2
-          dimensions: 32
-          epochs: 200
+      # Graph2Vec:
+      #   folds: 10
+      #   hyperparameters:
+      #     wl_iterations: 2
+      #     dimensions: 32
+      #     epochs: 200
 
-  synthetic:
-    path: /Users/wciezobka/sano/projects/masters-thesis/Datasets/Synthetic/ScaleFreeBias/networks
-    preprocessing:
-      undirected: False
-    models:
+  # synthetic:
+  #   path: /Users/wciezobka/sano/projects/masters-thesis/Datasets/Synthetic/ScaleFreeBias/networks
+  #   preprocessing:
+  #     undirected: False
+  #   models:
 
-      GCN:
-        holdout_size: 0.2
-        hyperparameters:
-          ldp_features: True
-          learning_rate: 0.005
-          epochs: 100
+  #     GCN:
+  #       holdout_size: 0.2
+  #       hyperparameters:
+  #         ldp_features: True
+  #         learning_rate: 0.005
+  #         epochs: 100
 
-      LTP:
-        folds: 10
-        hyperparameters:
-          log_degree: True
+  #     LTP:
+  #       folds: 10
+  #       hyperparameters:
+  #         log_degree: True
 
-      Graph2Vec:
-        folds: 10
-        hyperparameters:
-          wl_iterations: 2
-          dimensions: 32
-          epochs: 200
+  #     Graph2Vec:
+  #       folds: 10
+  #       hyperparameters:
+  #         wl_iterations: 2
+  #         dimensions: 32
+  #         epochs: 200

@@ -1,0 +1,28 @@
+seed: 54321
+datasets:
+
+  stroke:
+    path: /Users/wciezobka/sano/projects/masters-thesis/Datasets/NeuroFlicksFC/networks
+    preprocessing:
+      undirected: True
+      connection_weight_threshold: !!python/tuple [0.5, 0.999]
+    models:
+
+      GCN:
+        holdout_size: 0.2
+        hyperparameters:
+          ldp_features: True
+          learning_rate: 0.001
+          epochs: 150
+
+      LTP:
+        folds: 10
+        hyperparameters:
+          log_degree: True
+
+      Graph2Vec:
+        folds: 10
+        hyperparameters:
+          wl_iterations: 2
+          dimensions: 32
+          epochs: 200
