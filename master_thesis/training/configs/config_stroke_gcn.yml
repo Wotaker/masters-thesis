@@ -6,14 +6,13 @@ datasets:
     channel: 0
     preprocessing:
       undirected: False
-      connection_weight_threshold: !!python/tuple [0.8, 0.999]
+      connection_weight_threshold: !!python/tuple [0.6, -0.6]
+      subtract_control_mean: True
     models:
 
       GCN:
         holdout_size: 0.2
         hyperparameters:
           ldp_features: True
-          learning_rate: 0.001
+          learning_rate: 0.005
           epochs: 150
-          # dropout: 0.1
-          # print_every: 30

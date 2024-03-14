@@ -18,6 +18,12 @@ class Preprocessing():
         are considered as edges.
     undirected : bool
         If True, the networks are converted to undirected graphs.
+    subtract_control_mean : bool
+        If True, the mean of the control population is subtracted from the networks.
+    shuffle : bool
+        Whether to shuffle the networks and labels.
+    seed : Optional[int]
+        Seed used when shuffling the networks and labels.
     
     Examples
     --------
@@ -35,6 +41,7 @@ class Preprocessing():
             connection_weight_threshold: Optional[Tuple] = None,
             connection_significance_threshold: Optional[float] = None,
             undirected: bool = False,
+            subtract_control_mean: bool = False,
             shuffle: bool = True,
             seed: Optional[int] = None
         ) -> None:
@@ -45,21 +52,33 @@ class Preprocessing():
         self.connection_weight_threshold = connection_weight_threshold
         self.connection_significance_threshold = connection_significance_threshold
         self.undirected = undirected
+        self.subtract_control_mean = subtract_control_mean
         self.shuffle = shuffle
         self.seed = seed
 
     def __call__(self, np_networks: List[np.ndarray], labels: List[int]) -> Tuple[List[nx.DiGraph], List[int]]:
         
         # Cast to numpy array
-        np_networks = np.stack(np_networks)
+        np_networks = np.array(np_networks)
         self.score_mean, self.score_std = np_networks.mean(), np_networks.std()
+
+        # Subtract control mean
+        if self.subtract_control_mean:
+            np_control_mean = np_networks[np.array(labels) == 0].mean(axis=0)
+            np_networks = np_networks - np_control_mean
         
         # Preprocess networks
         if self.connection_weight_threshold is not None:
-            if self.connection_weight_threshold[0] is not None:
-                np_networks = np.where(np_networks < self.connection_weight_threshold[0], 0, np_networks)
-            if self.connection_weight_threshold[1] is not None:
-                np_networks = np.where(np_networks > self.connection_weight_threshold[1], 0, np_networks)
+            if self.connection_weight_threshold[0] > self.connection_weight_threshold[1]:
+                np_networks = np.where(np.logical_and(
+                    np_networks > self.connection_weight_threshold[1],
+                    np_networks < self.connection_weight_threshold[0]
+                ), 0, np_networks)
+            else:
+                if self.connection_weight_threshold[0] is not None:
+                    np_networks = np.where(np_networks < self.connection_weight_threshold[0], 0, np_networks)
+                if self.connection_weight_threshold[1] is not None:
+                    np_networks = np.where(np_networks > self.connection_weight_threshold[1], 0, np_networks)
         elif self.connection_significance_threshold is not None:
             np_networks = np.where(np_networks < self.score_mean + self.connection_significance_threshold * self.score_std, 0, np_networks)
             # np_networks = np_networks > self.score_mean + self.connection_significance_threshold * self.score_std
