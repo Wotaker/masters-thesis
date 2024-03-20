@@ -28,19 +28,29 @@ def load_dataset(dataset_name: str, dataset_config: Dict) -> Tuple[List[nx.DiGra
     preprocesing_kwargs = dataset_config["preprocessing"]
 
     # Load and preprocess networks
-    X, y = Preprocessing(seed=global_seed, **preprocesing_kwargs)(*load_np_data(networks_dir_path, channel))
-    logging.info(f"Loaded {len(X)} networks with {len(X[0].nodes)} nodes each")
+    X, y = load_np_data(networks_dir_path, channel)
+    logging.info(f"Loaded {X.shape[0]} networks with {X.shape[1]} nodes each")
 
     # Plot sample networks
     if logging.getLogger().level <= LOGLEVEL_MAP["PLOT"]:
         logging.log(LOGLEVEL_MAP["PLOT"], "Plotting sample networks...")
-        plot_sample_networks(X, y, rows=4, save_path=f"{dataset_name}_sample_networks.png")
+
+        # Preprocess data
+        X_verbose, y_verbose = Preprocessing(seed=global_seed, **preprocesing_kwargs)(X, y)
+        plot_sample_networks(X_verbose, y_verbose, rows=4, save_path=f"{dataset_name}_sample_networks.png")
     
     # Return dataset
     return X, y
 
 
-def holdout(model_name: str, model_config: Dict, X: List[nx.DiGraph], y: List[int]) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def holdout(
+        model_name: str,
+        model_config: Dict,
+        dataset_config: Dict,
+        X: List[nx.DiGraph],
+        y: List[int],
+        preprocessed: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     
     # Extract model configuration
     holdout_size = int(model_config["holdout_size"] * len(X))
@@ -49,12 +59,23 @@ def holdout(model_name: str, model_config: Dict, X: List[nx.DiGraph], y: List[in
     # Shuffle data
     idx = np.arange(len(X))
     np.random.shuffle(idx)
-    X = [X[i] for i in idx]
-    y = [y[i] for i in idx]
+    X = np.array([X[i] for i in idx])
+    y = np.array([y[i] for i in idx])
 
     # Split data
     X_train, X_test = X[:-holdout_size], X[-holdout_size:]
     y_gold_train, y_gold_test = y[:-holdout_size], y[-holdout_size:]
+
+    if not preprocessed:
+        if dataset_config["subtract_mean"]:
+            # Subtraction of control mean
+            train_control_mean = X_train[y_gold_train == 0].mean(axis=0)
+            X_train = X_train - train_control_mean
+            X_test = X_test - train_control_mean
+
+        # Preprocessing
+        X_train, y_gold_train = Preprocessing(seed=global_seed, **dataset_config["preprocessing"])(X_train, y_gold_train)
+        X_test, y_gold_test = Preprocessing(seed=global_seed, **dataset_config["preprocessing"])(X_test, y_gold_test)
 
     # Train model
     model: BaseModel = MODELS_MAP[model_name](**hyperparameters)
@@ -68,7 +89,14 @@ def holdout(model_name: str, model_config: Dict, X: List[nx.DiGraph], y: List[in
     return y_gold_train, y_hat_train, y_gold_test, y_hat_test
 
 
-def kfold(model_name: str, model_config: Dict, X: List[nx.DiGraph], y: List[int]) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def kfold(
+        model_name: str,
+        model_config: Dict,
+        dataset_config: Dict,
+        X: List[nx.DiGraph],
+        y: List[int],
+        preprocessed: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     
     # Extract model configuration
     folds = model_config["folds"]
@@ -84,7 +112,20 @@ def kfold(model_name: str, model_config: Dict, X: List[nx.DiGraph], y: List[int]
 
         # Split data
         X_train, X_test = [X[i] for i in train_index], [X[i] for i in test_index]
+        X_train, X_test = np.array(X_train), np.array(X_test)
         y_train, y_test = [y[i] for i in train_index], [y[i] for i in test_index]
+        y_train, y_test = np.array(y_train), np.array(y_test)
+
+        if not preprocessed:
+            if dataset_config["subtract_mean"]:
+            # Subtraction of control mean
+                train_control_mean = X_train[y_train == 0].mean(axis=0)
+                X_train = X_train - train_control_mean
+                X_test = X_test - train_control_mean
+
+            # Preprocessing
+            X_train, y_train = Preprocessing(seed=global_seed, **dataset_config["preprocessing"])(X_train, y_train)
+            X_test, y_test = Preprocessing(seed=global_seed, **dataset_config["preprocessing"])(X_test, y_test)
 
         # Train model (LTP)
         model: BaseModel = MODELS_MAP[model_name](**hyperparameters)
@@ -213,25 +254,36 @@ if __name__ == "__main__":
         # Loop over models
         for model_name, model_config in dataset_config["models"].items():
             logging.info(f"Training model {model_name} on dataset {dataset_name}...")
+
+            # Set preprocessed flag
+            preprocessed = False
             
             # When using Graph2Vec, embed graphs first
             if model_name.lower() == "graph2vec":
                 logging.info("Embedding graphs with Graph2Vec...")
+
+                X_control_mean = X[y == 0].mean(axis=0)
+                X = X - X_control_mean
+                X, y = Preprocessing(seed=global_seed, **dataset_config["preprocessing"])(X, y)
 
                 graph2vec_kwargs = model_config.pop("hyperparameters", {})
                 graph2vec = Graph2Vec(**graph2vec_kwargs)
                 graph2vec.fit(X)
                 X = graph2vec.get_embedding()
 
+                preprocessed = True
+
             # If holdout size is specified, use holdout validation
             if model_config.get("holdout_size", None) is not None:
                 logging.info("Using holdout validation...")
-                y_gold_train, y_hat_train, y_gold_test, y_hat_test = holdout(model_name.upper(), model_config, X, y)
+                y_gold_train, y_hat_train, y_gold_test, y_hat_test = holdout(
+                    model_name.upper(), model_config, dataset_config, X, y, preprocessed)
             
             # If folds are specified, use k-fold cross-validation
             elif model_config.get("folds", None) is not None:
                 logging.info(f"Using {model_config['folds']}-fold cross-validation...")
-                y_gold_train, y_hat_train, y_gold_test, y_hat_test = kfold(model_name.upper(), model_config, X, y)
+                y_gold_train, y_hat_train, y_gold_test, y_hat_test = kfold(
+                    model_name.upper(), model_config, dataset_config, X, y, preprocessed)
             
             # If neither holdout size nor folds are specified, log error and skip
             else:

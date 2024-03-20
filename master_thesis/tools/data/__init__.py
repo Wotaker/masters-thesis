@@ -9,7 +9,7 @@ from master_thesis.tools.data.synthetic_networks import scale_free_network
 from master_thesis.tools.data.connectivity_dataset import ConnectivityDataset
 
 
-def load_np_data(networks_dir: str, channel: Optional[int] = None) -> Tuple[List[np.ndarray], List[int]]:
+def load_np_data(networks_dir: str, channel: Optional[int] = None) -> Tuple[np.ndarray, np.ndarray]:
 
     # TODO Get rid of commented code, by extractin a mock function that returns the same class with random labels
 
@@ -22,9 +22,11 @@ def load_np_data(networks_dir: str, channel: Optional[int] = None) -> Tuple[List
     # Load networks to numpy arrays
     np_networks = [np.load(p) for p in paths]
     np_networks = [net[channel] if channel is not None else net for net in np_networks]
+    np_networks = np.array(np_networks)
 
     # Extract labels
     labels = [int(x.split("-")[1][:3] == "PAT") for x in filenames]
+    labels = np.array(labels)
     # n_total = len(filenames)
     # labels = [1 for _ in range(n_total // 2)] + [0 for _ in range(n_total - n_total // 2)]
 

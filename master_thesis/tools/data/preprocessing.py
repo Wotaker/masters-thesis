@@ -41,7 +41,6 @@ class Preprocessing():
             connection_weight_threshold: Optional[Tuple] = None,
             connection_significance_threshold: Optional[float] = None,
             undirected: bool = False,
-            subtract_control_mean: bool = False,
             shuffle: bool = True,
             seed: Optional[int] = None
         ) -> None:
@@ -52,7 +51,6 @@ class Preprocessing():
         self.connection_weight_threshold = connection_weight_threshold
         self.connection_significance_threshold = connection_significance_threshold
         self.undirected = undirected
-        self.subtract_control_mean = subtract_control_mean
         self.shuffle = shuffle
         self.seed = seed
 
@@ -61,11 +59,6 @@ class Preprocessing():
         # Cast to numpy array
         np_networks = np.array(np_networks)
         self.score_mean, self.score_std = np_networks.mean(), np_networks.std()
-
-        # Subtract control mean
-        if self.subtract_control_mean:
-            np_control_mean = np_networks[np.array(labels) == 0].mean(axis=0)
-            np_networks = np_networks - np_control_mean
         
         # Preprocess networks
         if self.connection_weight_threshold is not None:
