@@ -2,6 +2,7 @@ Datasets/**
 Logs/**
 Results/**
 Reports/**
+master_thesis/training/configs/**
 *.egg-info
 master_thesis/graph_classification/Tutorial6.ipynb
 
