@@ -20,15 +20,16 @@ from master_thesis.tools.data import  load_np_data, Preprocessing
 from master_thesis.tools.plots import plot_sample_networks
 
 
-def load_dataset(dataset_name: str, dataset_config: Dict) -> Tuple[List[nx.DiGraph], List[int]]:
+def load_dataset(dataset_name: str, dataset_config: Dict) -> Tuple[np.ndarray, np.ndarray]:
 
     # Extract dataset configuration
     networks_dir_path = dataset_config["path"]
     channel = dataset_config.pop("channel", None)
+    hem_connections = dataset_config.pop("hem_connections", None)
     preprocesing_kwargs = dataset_config["preprocessing"]
 
     # Load and preprocess networks
-    X, y = load_np_data(networks_dir_path, channel)
+    X, y = load_np_data(networks_dir_path, channel, hem_connections)
     logging.info(f"Loaded {X.shape[0]} networks with {X.shape[1]} nodes each")
 
     # Plot sample networks
