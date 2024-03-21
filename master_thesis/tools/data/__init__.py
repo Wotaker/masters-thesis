@@ -1,6 +1,7 @@
 from typing import Optional, Tuple, List
 
 import os
+import logging
 import numpy as np
 import networkx as nx
 
@@ -15,7 +16,7 @@ def load_np_data(
         hem_connections: Optional[str] = None
     ) -> Tuple[np.ndarray, np.ndarray]:
 
-    # TODO Get rid of commented code, by extractin a mock function that returns the same class with random labels
+    # TODO Extract a mock function that returns the same class with random labels
 
     # Get filenames
     filenames = [f for f in os.listdir(networks_dir) if f.endswith(".npy")]
@@ -26,6 +27,11 @@ def load_np_data(
     # Load networks to numpy arrays
     np_networks = [np.load(p) for p in paths]
     np_networks = [net[channel] if channel is not None else net for net in np_networks]
+    for i, net in enumerate(np_networks):
+        if net.sum() == 0:
+            logging.warning(f"Network {filenames[i]} is empty, removing it from the dataset.")
+            del np_networks[i]
+            del filenames[i]
     np_networks = np.array(np_networks)
 
     # Filter hemispheric connections
@@ -45,8 +51,6 @@ def load_np_data(
     # Extract labels
     labels = [int(x.split("-")[1][:3] == "PAT") for x in filenames]
     labels = np.array(labels)
-    # n_total = len(filenames)
-    # labels = [1 for _ in range(n_total // 2)] + [0 for _ in range(n_total - n_total // 2)]
 
     return np_networks, labels
 
