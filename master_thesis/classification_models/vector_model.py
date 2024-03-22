@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from networkx import DiGraph
 import numpy as np
@@ -19,9 +19,9 @@ class VectorModel(BaseModel):
         self.device = device
         self.classifier = CLASSIC_CLASSIFIERS_MAP[classifier_type](**classifier_kwargs)
     
-    def fit(self, X: Array, y: List[int]):
+    def fit(self, X: Array, y: List[int], dataset_config: Optional[Dict] = None):
         self.classifier.fit(X, y)
 
-    def predict(self, X: Array):
+    def predict(self, X: Array, dataset_config: Optional[Dict] = None):
         y_hat = self.classifier.predict(X)
         return y_hat

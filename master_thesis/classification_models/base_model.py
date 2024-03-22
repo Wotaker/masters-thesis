@@ -80,7 +80,7 @@ def evaluate_train_test(y_train, y_train_hat, y_test, y_test_hat):
 class BaseModel():
 
     @abstractmethod
-    def fit(self, X, y):
+    def fit(self, X, y, dataset_config):
         """
         Fit the model to the data.
 
@@ -90,6 +90,8 @@ class BaseModel():
             Array of directed connectivity networks.
         y : List[int]
             Array of labels.
+        dataset_config : Optional[Dict]
+            Optional dictionary containing the dataset configuration, when the preprocessing is needed. Defaults to None.
 
         Returns
         -------
@@ -99,7 +101,7 @@ class BaseModel():
         pass
 
     @abstractmethod
-    def predict(self, X):
+    def predict(self, X, dataset_config):
         """
         Returns the model predictions for the given data.
 
@@ -107,6 +109,8 @@ class BaseModel():
         ----------
         X : List[networkx.DiGraph]
             Array of directed connectivity networks.
+        dataset_config : Optional[Dict]
+            Optional dictionary containing the dataset configuration, when the preprocessing is needed. Defaults to None.
         
         Returns
         -------

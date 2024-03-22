@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any, Union
 
 import datetime
 from networkx import Graph
@@ -13,6 +13,7 @@ from torch_geometric.loader import DataLoader
 
 from master_thesis.classification_models.base_model import BaseModel, EvaluationScores
 from master_thesis.classification_models.utils import *
+from master_thesis.tools.data import Preprocessing
 
 DEFAULT_CHECKPOINT_DIR = "master_thesis/classification_models/checkpoints/gcn"
 
@@ -153,25 +154,49 @@ class GCNModel(BaseModel):
         return 1 / class_counts.float()
         
     
-    def fit(self, X: List[Graph], y: List[int]):
+    def fit(self, X: Union[np.ndarray, List[Graph]], y: np.ndarray, dataset_config: Optional[Dict] = None):
 
-        # Prepare data
-        X = [self.nx2geometric(
-                self.device,
-                x,
+        # Split data into training and validation sets
+        validation_size = int(len(X) * self.validation_size)
+        X_train, X_val = X[:-validation_size], X[-validation_size:]
+        y_train, y_val = y[:-validation_size], y[-validation_size:]
+
+        # Preprocessing and control mean subtraction
+        if dataset_config is not None:
+            if dataset_config["subtract_mean"]:
+                total_control_mean = X[y == 0].mean(axis=0)
+                train_control_mean = X_train[y_train == 0].mean(axis=0)
+                X_val = X_val - total_control_mean
+                X_train = X_train - train_control_mean
+            X_train, y_train = Preprocessing(**dataset_config["preprocessing"])(X_train, y_train)
+            X_val, y_val = Preprocessing(**dataset_config["preprocessing"])(X_val, y_val)
+        
+        # Convert to PyTorch Geometric
+        X_train = [self.nx2geometric(
+                device=self.device,
+                nx_graph=x,
+                x_attr=None,
                 label=label
-            ) for x, label in zip(X, y)]
-        X = [LocalDegreeProfile()(x) for x in X] if self.ldp_features else [AddOnes()(x) for x in X]
+            ) for x, label in zip(X_train, y_train)]
+        X_val = [self.nx2geometric(
+                device=self.device,
+                nx_graph=x,
+                x_attr=None,
+                label=label
+            ) for x, label in zip(X_val, y_val)]
+
+        # Add LDP features
+        X_train = [LocalDegreeProfile()(x) for x in X_train] if self.ldp_features else [AddOnes()(x) for x in X_train]
+        X_val = [LocalDegreeProfile()(x) for x in X_val] if self.ldp_features else [AddOnes()(x) for x in X_val]
         
         # Define dataloaders
-        validation_size = int(len(X) * self.validation_size)
-        self.train_loader = DataLoader(X[:-validation_size], batch_size=self.batch_size, shuffle=True)
-        self.validation_loader = DataLoader(X[-validation_size:], batch_size=self.batch_size, shuffle=True)
-        self.train_loss_weights = self._calc_loss_weights(y[:-validation_size])
-        self.val_loss_weights = self._calc_loss_weights(y[-validation_size:])
+        self.train_loader = DataLoader(X_train, batch_size=self.batch_size, shuffle=True)
+        self.validation_loader = DataLoader(X_val, batch_size=self.batch_size, shuffle=True)
+        self.train_loss_weights = self._calc_loss_weights(y_train)
+        self.val_loss_weights = self._calc_loss_weights(y_val)
 
         # Define model and optimizer
-        self.model = GCN(X[0].x.shape[1], 2, self.hidden_channels, self.dropout).to(self.device)
+        self.model = GCN(X_train[0].x.shape[1], 2, self.hidden_channels, self.dropout).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
         # Train model
@@ -199,7 +224,7 @@ class GCNModel(BaseModel):
                 self._log(epoch, train_loss, val_loss, train_evaluation_scores, val_evaluation_scores)
             
 
-    def predict(self, X: List[Graph]) -> Array:
+    def predict(self, X: Union[np.ndarray, List[Graph]], dataset_config: Optional[Dict] = None) -> np.ndarray:
         
         # Load best model
         loaded = load_checkpoint(
@@ -210,9 +235,15 @@ class GCNModel(BaseModel):
         if loaded is not None:
             self.model, _, epoch, validation_metric = loaded
             logging.info(f"Loaded model from epoch {epoch} with validation metric {validation_metric:.4f}")
+        
+        # Preprocessing
+        if dataset_config is not None:
+            X, _ = Preprocessing(**dataset_config["preprocessing"], shuffle=False)(X, None)
 
-        # Prepare data and dataloaders
+        # Convert to PyTorch Geometric
         X = [self.nx2geometric(self.device, x) for x in X]
+
+        # Add LDP features
         X = [LocalDegreeProfile()(x) for x in X] if self.ldp_features else [AddOnes()(x) for x in X]
         
         # Define dataloaders

@@ -48,8 +48,8 @@ def holdout(
         model_name: str,
         model_config: Dict,
         dataset_config: Dict,
-        X: List[nx.DiGraph],
-        y: List[int],
+        X: np.ndarray,
+        y: np.ndarray,
         preprocessed: bool = False
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     
@@ -67,24 +67,22 @@ def holdout(
     X_train, X_test = X[:-holdout_size], X[-holdout_size:]
     y_gold_train, y_gold_test = y[:-holdout_size], y[-holdout_size:]
 
-    if not preprocessed:
-        if dataset_config["subtract_mean"]:
-            # Subtraction of control mean
-            train_control_mean = X_train[y_gold_train == 0].mean(axis=0)
-            X_train = X_train - train_control_mean
-            X_test = X_test - train_control_mean
-
-        # Preprocessing
-        X_train, y_gold_train = Preprocessing(seed=global_seed, **dataset_config["preprocessing"])(X_train, y_gold_train)
-        X_test, y_gold_test = Preprocessing(seed=global_seed, **dataset_config["preprocessing"])(X_test, y_gold_test)
+    # Subtraction of control mean
+    if dataset_config["subtract_mean"]:
+        total_control_mean = X[y == 0].mean(axis=0)
+        train_control_mean = X_train[y_gold_train == 0].mean(axis=0)
+        X_test = X_test - total_control_mean
 
     # Train model
     model: BaseModel = MODELS_MAP[model_name](**hyperparameters)
-    model.fit(X_train, y_gold_train)
+    model.fit(X_train, y_gold_train, dataset_config if not preprocessed else None)
 
     # Predict
-    y_hat_train = model.predict(X_train)
-    y_hat_test = model.predict(X_test)
+    y_hat_train = model.predict(
+        X_train - train_control_mean if not preprocessed and dataset_config["subtract_mean"] else X_train,
+        dataset_config if not preprocessed else None
+    )
+    y_hat_test = model.predict(X_test, dataset_config if not preprocessed else None)
 
     # Return
     return y_gold_train, y_hat_train, y_gold_test, y_hat_test
@@ -94,8 +92,8 @@ def kfold(
         model_name: str,
         model_config: Dict,
         dataset_config: Dict,
-        X: List[nx.DiGraph],
-        y: List[int],
+        X: np.ndarray,
+        y: np.ndarray,
         preprocessed: bool = False
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     
@@ -117,27 +115,25 @@ def kfold(
         y_train, y_test = [y[i] for i in train_index], [y[i] for i in test_index]
         y_train, y_test = np.array(y_train), np.array(y_test)
 
-        if not preprocessed:
-            if dataset_config["subtract_mean"]:
-            # Subtraction of control mean
-                train_control_mean = X_train[y_train == 0].mean(axis=0)
-                X_train = X_train - train_control_mean
-                X_test = X_test - train_control_mean
-
-            # Preprocessing
-            X_train, y_train = Preprocessing(seed=global_seed, **dataset_config["preprocessing"])(X_train, y_train)
-            X_test, y_test = Preprocessing(seed=global_seed, **dataset_config["preprocessing"])(X_test, y_test)
+        # Subtraction of control mean
+        if dataset_config["subtract_mean"]:
+            total_control_mean = X[y == 0].mean(axis=0)
+            train_control_mean = X_train[y_train == 0].mean(axis=0)
+            X_test = X_test - total_control_mean
 
         # Train model (LTP)
         model: BaseModel = MODELS_MAP[model_name](**hyperparameters)
-        model.fit(X_train, y_train)
+        model.fit(X_train, y_train, dataset_config if not preprocessed else None)
 
         # Predict
-        y_hat_train = model.predict(X_train)
+        y_hat_train = model.predict(
+            X_train - train_control_mean if not preprocessed and dataset_config["subtract_mean"] else X_train,
+            dataset_config if not preprocessed else None
+        )
         y_hat_train_acc.append(y_hat_train)
         y_gold_train_acc.append(y_train)
 
-        y_hat_test = model.predict(X_test)
+        y_hat_test = model.predict(X_test, dataset_config if not preprocessed else None)
         y_hat_test_acc.append(y_hat_test)
         y_gold_test_acc.append(y_test)
     
@@ -248,6 +244,7 @@ if __name__ == "__main__":
     # Loop over datasets
     for dataset_name, dataset_config in config["datasets"].items():
         logging.info(f"Loading dataset {dataset_name}...")
+        dataset_config["preprocessing"]["seed"] = global_seed
 
         # Load dataset
         X, y = load_dataset(dataset_name, dataset_config)
@@ -263,9 +260,10 @@ if __name__ == "__main__":
             if model_name.lower() == "graph2vec":
                 logging.info("Embedding graphs with Graph2Vec...")
 
-                X_control_mean = X[y == 0].mean(axis=0)
-                X = X - X_control_mean
-                X, y = Preprocessing(seed=global_seed, **dataset_config["preprocessing"])(X, y)
+                if dataset_config["subtract_mean"]:
+                    X_control_mean = X[y == 0].mean(axis=0)
+                    X = X - X_control_mean
+                X, y = Preprocessing(**dataset_config["preprocessing"])(X, y)
 
                 graph2vec_kwargs = model_config.pop("hyperparameters", {})
                 graph2vec = Graph2Vec(**graph2vec_kwargs)

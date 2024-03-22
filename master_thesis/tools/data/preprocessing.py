@@ -54,10 +54,9 @@ class Preprocessing():
         self.shuffle = shuffle
         self.seed = seed
 
-    def __call__(self, np_networks: List[np.ndarray], labels: List[int]) -> Tuple[List[nx.DiGraph], List[int]]:
+    def __call__(self, np_networks: np.ndarray, labels: Optional[np.ndarray]) -> Tuple[List[nx.DiGraph], List[int]]:
         
-        # Cast to numpy array
-        np_networks = np.array(np_networks)
+        # Calculate mean and standard deviation
         self.score_mean, self.score_std = np_networks.mean(), np_networks.std()
         
         # Preprocess networks
@@ -86,7 +85,7 @@ class Preprocessing():
         # Shuffle data
         if self.seed is not None:
                 np.random.seed(self.seed)
-        if self.shuffle:
+        if self.shuffle and labels is not None:
             idx = np.arange(len(nx_networks))
             np.random.shuffle(idx)
             nx_networks = [nx_networks[i] for i in idx]

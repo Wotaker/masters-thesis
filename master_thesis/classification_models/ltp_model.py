@@ -11,11 +11,11 @@ classification using Local Topological Profile", which can be cited as:
 }
 """
 
-from typing import Dict, List
+from typing import Dict, List, Union, Optional
 
 import torch
 import numpy as np
-from networkx import DiGraph
+from networkx import Graph
 from networkit.nxadapter import nx2nk
 from torch_geometric.data import Data
 from torch_geometric.data.datapipes import functional_transform
@@ -36,6 +36,7 @@ from master_thesis.classification_models.utils import (
     calculate_jaccard_index,
     calculate_local_degree_score,
 )
+from master_thesis.tools.data import Preprocessing
 
 
 def _extract_single_graph_features(
@@ -211,12 +212,19 @@ class LTPModel(BaseModel):
         ), n_bins=self.n_bins, log_degree=self.log_degree) for x in X]
         return X
     
-    def fit(self, X: List[DiGraph], y: List[int]):
+    def fit(self, X: Union[np.ndarray, List[Graph]], y: List[int], dataset_config: Optional[Dict] = None):
+        if dataset_config is not None:
+            if dataset_config["subtract_mean"]:
+                total_control_mean = X[y == 0].mean(axis=0)
+                X = X - total_control_mean
+            X, y = Preprocessing(**dataset_config["preprocessing"])(X, y)
         X = [self.nx2geometric(self.device, x, x_attr=None, label=label) for x, label in zip(X, y)]
         X = self._ltp_transform(X)
         self.classifier.fit(X, y)
 
-    def predict(self, X: List[DiGraph]):
+    def predict(self, X: Union[np.ndarray, List[Graph]], dataset_config: Optional[Dict] = None) -> np.ndarray:
+        if dataset_config is not None:
+            X, _ = Preprocessing(**dataset_config["preprocessing"], shuffle=False)(X, None)
         X = [self.nx2geometric(self.device, x, x_attr=None) for x in X]
         X = self._ltp_transform(X)
         y_hat = self.classifier.predict(X)
