@@ -48,10 +48,11 @@ def holdout(
         model_name: str,
         model_config: Dict,
         dataset_config: Dict,
+        results_acc: pd.DataFrame,
         X: np.ndarray,
         y: np.ndarray,
         preprocessed: bool = False
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, pd.DataFrame]:
     
     # Extract model configuration
     holdout_size = int(model_config["holdout_size"] * len(X))
@@ -84,18 +85,32 @@ def holdout(
     )
     y_hat_test = model.predict(X_test, dataset_config if not preprocessed else None)
 
+    # Log final results
+    results_acc = log_results(
+        results_acc,
+        experiment_dir_path,
+        dataset_name,
+        model_name,
+        0,
+        y_gold_train,
+        y_hat_train,
+        y_gold_test,
+        y_hat_test
+    )
+
     # Return
-    return y_gold_train, y_hat_train, y_gold_test, y_hat_test
+    return y_gold_train, y_hat_train, y_gold_test, y_hat_test, results_acc
 
 
 def kfold(
         model_name: str,
         model_config: Dict,
         dataset_config: Dict,
+        results_acc: pd.DataFrame,
         X: np.ndarray,
         y: np.ndarray,
         preprocessed: bool = False
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, pd.DataFrame]:
     
     # Extract model configuration
     folds = model_config["folds"]
@@ -107,7 +122,7 @@ def kfold(
 
     # Define k-fold cross-validation
     kfold_cv = KFold(n_splits=folds, shuffle=True, random_state=global_seed)
-    for fold, (train_index, test_index) in tqdm(enumerate(kfold_cv.split(X)), total=folds, desc="Cross-validation"):
+    for fold, (train_index, test_index) in tqdm(enumerate(kfold_cv.split(X), start=1), total=folds, desc="Cross-validation"):
 
         # Split data
         X_train, X_test = [X[i] for i in train_index], [X[i] for i in test_index]
@@ -136,6 +151,19 @@ def kfold(
         y_hat_test = model.predict(X_test, dataset_config if not preprocessed else None)
         y_hat_test_acc.append(y_hat_test)
         y_gold_test_acc.append(y_test)
+
+        # Log fold results
+        results_acc = log_results(
+            results_acc,
+            experiment_dir_path,
+            dataset_name,
+            model_name,
+            fold,
+            y_train,
+            y_hat_train,
+            y_test,
+            y_hat_test
+        )
     
     # Concatenate lists
     y_hat_train = np.concatenate(y_hat_train_acc)
@@ -144,8 +172,21 @@ def kfold(
     y_hat_test = np.concatenate(y_hat_test_acc)
     y_gold_test = np.concatenate(y_gold_test_acc)
 
+    # Log final results
+    results_acc = log_results(
+        results_acc,
+        experiment_dir_path,
+        dataset_name,
+        model_name,
+        0,
+        y_gold_train,
+        y_hat_train,
+        y_gold_test,
+        y_hat_test
+    )
+
     # Return
-    return y_gold_train, y_hat_train, y_gold_test, y_hat_test
+    return y_gold_train, y_hat_train, y_gold_test, y_hat_test, results_acc
 
 
 def create_experiment_dir(dir_path: str, config_path: str) -> None:
@@ -170,11 +211,12 @@ def log_results(
         root_dir: str,
         dataset_name: str,
         model_name: str,
+        fold: int,
         y_gold_train: np.ndarray,
         y_hat_train: np.ndarray,
         y_gold_test: np.ndarray,
         y_hat_test: np.ndarray
-    ):
+    ) -> pd.DataFrame:
 
     # Create model results directory
     model_results_dir_path = os.path.join(root_dir, f"{dataset_name}_{model_name}")
@@ -196,6 +238,7 @@ def log_results(
     results = results.append({
         "dataset": dataset_name,
         "model": model_name,
+        "fold": fold,
         "split": "train",
         "accuracy": train_metrices.accuracy,
         "precision": train_metrices.precision,
@@ -206,6 +249,7 @@ def log_results(
     results = results.append({
         "dataset": dataset_name,
         "model": model_name,
+        "fold": fold,
         "split": "test",
         "accuracy": test_metrices.accuracy,
         "precision": test_metrices.precision,
@@ -239,7 +283,7 @@ if __name__ == "__main__":
     # Set up results directory and results dataframe
     experiment_dir_path = create_experiment_dir(args.results_dir, args.config_path)
     logging.info(f"Created experiment directory at `{experiment_dir_path}`")
-    results = pd.DataFrame(columns=["dataset", "model", "split", "accuracy", "precision", "recall", "f1", "auc" ])
+    results_df = pd.DataFrame(columns=["dataset", "model", "fold", "split", "accuracy", "precision", "recall", "f1", "auc" ])
 
     # Loop over datasets
     for dataset_name, dataset_config in config["datasets"].items():
@@ -275,35 +319,23 @@ if __name__ == "__main__":
             # If holdout size is specified, use holdout validation
             if model_config.get("holdout_size", None) is not None:
                 logging.info("Using holdout validation...")
-                y_gold_train, y_hat_train, y_gold_test, y_hat_test = holdout(
-                    model_name.upper(), model_config, dataset_config, X, y, preprocessed)
+                y_gold_train, y_hat_train, y_gold_test, y_hat_test, results_df = holdout(
+                    model_name.upper(), model_config, dataset_config, results_df, X, y, preprocessed)
             
             # If folds are specified, use k-fold cross-validation
             elif model_config.get("folds", None) is not None:
                 logging.info(f"Using {model_config['folds']}-fold cross-validation...")
-                y_gold_train, y_hat_train, y_gold_test, y_hat_test = kfold(
-                    model_name.upper(), model_config, dataset_config, X, y, preprocessed)
+                y_gold_train, y_hat_train, y_gold_test, y_hat_test, results_df = kfold(
+                    model_name.upper(), model_config, dataset_config, results_df, X, y, preprocessed)
             
             # If neither holdout size nor folds are specified, log error and skip
             else:
                 logging.error(f"Invalid configuration for model {model_name} in dataset {dataset_name}." +\
                               "Specify either 'holdout_size' or 'folds'. Skipping...")
                 continue
-
-            # Gather model results
-            results = log_results(
-                results,
-                experiment_dir_path,
-                dataset_name,
-                model_name,
-                y_gold_train,
-                y_hat_train,
-                y_gold_test,
-                y_hat_test
-            )
     
     # Save results
-    results.to_csv(os.path.join(experiment_dir_path, "results.csv"), index=False)
+    results_df.to_csv(os.path.join(experiment_dir_path, "results.csv"), index=False)
             
 
     
