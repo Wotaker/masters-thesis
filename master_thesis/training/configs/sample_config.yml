@@ -2,7 +2,7 @@ seed: 12345
 datasets:
 
   stroke:
-    path: /Users/wciezobka/sano/projects/masters-thesis/Datasets/NeuroFlicksUnidirRCC/networks
+    path: $NETWORKS_DIR/stroke/networks
     channel: 0
     subtract_mean: True
     preprocessing:
@@ -36,7 +36,7 @@ datasets:
           epochs: 200
 
   synthetic-ltp-ridge:
-    path: /Users/wciezobka/sano/projects/masters-thesis/Datasets/Synthetic/ScaleFreeBias/networks
+    path: $NETWORKS_DIR/synthetic/networks
     subtract_mean: False
     preprocessing:
       undirected: False
@@ -52,7 +52,7 @@ datasets:
           }
 
   synthetic-ltp-rf:
-    path: /Users/wciezobka/sano/projects/masters-thesis/Datasets/Synthetic/ScaleFreeBias/networks
+    path: $NETWORKS_DIR/synthetic/networks
     subtract_mean: False
     preprocessing:
       undirected: False
