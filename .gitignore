@@ -3,6 +3,7 @@ Logs/**
 Results/**
 Reports/**
 master_thesis/training/configs/**
+!master_thesis/training/configs/sample_config.yml
 *.egg-info
 master_thesis/graph_classification/Tutorial6.ipynb
 

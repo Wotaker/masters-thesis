@@ -1,0 +1,70 @@
+seed: 12345
+datasets:
+
+  stroke:
+    path: /Users/wciezobka/sano/projects/masters-thesis/Datasets/NeuroFlicksUnidirRCC/networks
+    channel: 0
+    subtract_mean: True
+    preprocessing:
+      undirected: False
+      connection_weight_threshold: !!python/tuple [0.6, -0.6]
+    models:
+
+      GCN:
+        holdout_size: 0.2
+        hyperparameters:
+          ldp_features: True
+          learning_rate: 0.005
+          epochs: 150
+
+      LTP:
+        holdout_size: 0.2
+        hyperparameters:
+          log_degree: True
+          classifier_type: "random_forest"
+          classifier_kwargs: {
+            class_weight: "balanced",
+            max_features: 5,
+            max_depth: 2
+          }
+
+      Graph2Vec:
+        holdout_size: 0.2
+        hyperparameters:
+          wl_iterations: 2
+          dimensions: 32
+          epochs: 200
+
+  synthetic-ltp-ridge:
+    path: /Users/wciezobka/sano/projects/masters-thesis/Datasets/Synthetic/ScaleFreeBias/networks
+    subtract_mean: False
+    preprocessing:
+      undirected: False
+    models:
+
+      LTP:
+        folds: 10
+        hyperparameters:
+          log_degree: True
+          classifier_type: "ridge"
+          classifier_kwargs: {
+            class_weight: "balanced",
+          }
+
+  synthetic-ltp-rf:
+    path: /Users/wciezobka/sano/projects/masters-thesis/Datasets/Synthetic/ScaleFreeBias/networks
+    subtract_mean: False
+    preprocessing:
+      undirected: False
+    models:
+      
+      LTP:
+        folds: 10
+        hyperparameters:
+          log_degree: True
+          classifier_type: "random_forest"
+          classifier_kwargs: {
+            class_weight: "balanced",
+            max_features: 5,
+            max_depth: 2
+          }

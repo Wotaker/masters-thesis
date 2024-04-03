@@ -56,6 +56,10 @@ def test_hypothesis_I(results_dir: str):
             f1 = df.f1.values
             auc = df.auc.values
 
+            # Skip the dataset-model pair if there are no results
+            if len(auc) == 0:
+                continue
+
             # Perform one-sample t-test to verify hypothesis I
             _, pval = ttest_1samp(auc, 0.5, alternative="greater")
 
