@@ -40,7 +40,7 @@ To reproduce the results, one should follow the steps below:
 1. Prepare the dataset directory with the connectivity networks, lets name it `NETWORKS_DIR`.
 2. Define a training configuration in a `.yml` file located in the `training/configs` directory. One can use the existing `training/configs/sample_config.yml` as a template.
 3. `cd` to the repository root directory.
-4. Setup the python package and install the dependencies by running the following command:  
+4. Setup the python package and install the dependencies by running the following command (I strongly recommend using a virtual environment with python 3.10):  
    `pip install -e .`
 5. Run the training script:  
    `python master_thesis/training/train.py -c master_thesis/training/configs/sample_config.yml`
