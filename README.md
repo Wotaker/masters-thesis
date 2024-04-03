@@ -40,10 +40,12 @@ To reproduce the results, one should follow the steps below:
 1. Prepare the dataset directory with the connectivity networks, lets name it `NETWORKS_DIR`.
 2. Define a training configuration in a `.yml` file located in the `training/configs` directory. One can use the existing `training/configs/sample_config.yml` as a template.
 3. `cd` to the repository root directory.
-4. Run the training script:  
+4. Setup the python package and install the dependencies by running the following command:  
+   `pip install -e .`
+5. Run the training script:  
    `python master_thesis/training/train.py -c master_thesis/training/configs/sample_config.yml`
-5. After the training is finished, the results are saved in the default `Results` directory. One can change the default results directory by passing the `-r` argument to the training script.
-6. (Optional) To summarize the results, and test the hypotheses, run the scripts in the `tools/scripts` directory:
+6. After the training is finished, the results are saved in the default `Results` directory. One can change the default results directory by passing the `-r` argument to the training script.
+7. (Optional) To summarize the results, and test the hypotheses, run the scripts in the `tools/scripts` directory:
    1. `python master_thesis/tools/scripts/test_hypothesis_I.py -r $EXPERIMENT_RESULTS_DIR`
    2. `python master_thesis/tools/scripts/test_hypothesis_II.py -r $EXPERIMENT_RESULTS_DIR -s $SUPERIOR_DATASET -i $INFERIOR_DATASET`
 

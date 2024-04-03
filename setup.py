@@ -7,5 +7,18 @@ setup(
         'master_thesis',
         'master_thesis.*'
     ]),
-    install_requires=[],
+    install_requires=[
+        'matplotlib',
+        'numpy',
+        'networkx',
+        'pandas',
+        'scipy',
+        'scikit-learn',
+        'seaborn',
+        'torch',
+        'torch-geometric',
+        'torch-scatter',
+        'tqdm',
+        'tensorboard'
+    ],
 )
