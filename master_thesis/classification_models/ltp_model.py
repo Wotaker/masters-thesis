@@ -229,3 +229,11 @@ class LTPModel(BaseModel):
         X = self._ltp_transform(X)
         y_hat = self.classifier.predict(X)
         return y_hat
+    
+    def predict_proba(self, X: np.ndarray, dataset_config: Optional[Dict] = None) -> np.ndarray:
+        X = X.reshape(-1, 100, 100)
+        X, _ = Preprocessing(**dataset_config["preprocessing"], shuffle=False)(X, None)
+        X = [self.nx2geometric(self.device, x, x_attr=None) for x in X]
+        X = self._ltp_transform(X)
+        probs = self.classifier.predict_proba(X)
+        return probs

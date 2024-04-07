@@ -119,6 +119,25 @@ class BaseModel():
         """
         pass
 
+    @abstractmethod
+    def predict_proba(self, X, dataset_config):
+        """
+        Returns the model predictions for the given data.
+
+        Parameters
+        ----------
+        X : Union[np.ndarray, List[Graph]
+            Array of directed connectivity networks.
+        dataset_config : Optional[Dict]
+            Optional dictionary containing the dataset configuration, when the preprocessing is needed. Defaults to None.
+        
+        Returns
+        -------
+        np.ndarray
+            Array of predicted labels.
+        """
+        pass
+
     @staticmethod
     def nx2geometric(
         device: str,

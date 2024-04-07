@@ -189,7 +189,7 @@ def kfold(
     return y_gold_train, y_hat_train, y_gold_test, y_hat_test, results_acc
 
 
-def create_experiment_dir(dir_path: str, config_path: str) -> None:
+def create_experiment_dir(dir_path: str, config_path: str) -> str:
 
     # Get timestamp
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
