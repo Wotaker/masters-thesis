@@ -20,7 +20,7 @@ from master_thesis.tools.data import  load_np_data, Preprocessing
 from master_thesis.tools.plots import plot_sample_networks
 
 
-def load_dataset(dataset_name: str, dataset_config: Dict) -> Tuple[np.ndarray, np.ndarray]:
+def load_dataset(dataset_name: str, dataset_config: Dict, with_filenames: bool = False) -> Tuple[np.ndarray, np.ndarray]:
 
     # Extract dataset configuration
     networks_dir_path = dataset_config["path"]
@@ -29,7 +29,7 @@ def load_dataset(dataset_name: str, dataset_config: Dict) -> Tuple[np.ndarray, n
     preprocesing_kwargs = dataset_config["preprocessing"]
 
     # Load and preprocess networks
-    X, y = load_np_data(networks_dir_path, channel, hem_connections)
+    X, y, filenames = load_np_data(networks_dir_path, channel, hem_connections, with_filenames)
     logging.info(f"Loaded {X.shape[0]} networks with {X.shape[1]} nodes each")
 
     # Plot sample networks
@@ -41,6 +41,8 @@ def load_dataset(dataset_name: str, dataset_config: Dict) -> Tuple[np.ndarray, n
         plot_sample_networks(X_verbose, y_verbose, rows=4, save_path=f"{dataset_name}_sample_networks.png")
     
     # Return dataset
+    if with_filenames:
+        return X, y, filenames
     return X, y
 
 

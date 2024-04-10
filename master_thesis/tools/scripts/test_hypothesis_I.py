@@ -61,6 +61,7 @@ def test_hypothesis_I(results_dir: str):
                 continue
 
             # Perform one-sample t-test to verify hypothesis I
+            # TODO Replace with https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.mannwhitneyu.html
             _, pval = ttest_1samp(auc, 0.5, alternative="greater")
 
             # Store the results in the summary dictionary

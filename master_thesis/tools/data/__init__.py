@@ -13,7 +13,8 @@ from master_thesis.tools.data.connectivity_dataset import ConnectivityDataset
 def load_np_data(
         networks_dir: str,
         channel: Optional[int] = None,
-        hem_connections: Optional[str] = None
+        hem_connections: Optional[str] = None,
+        with_filenames: bool = False
     ) -> Tuple[np.ndarray, np.ndarray]:
 
     # TODO Extract a mock function that returns the same class with random labels
@@ -52,6 +53,9 @@ def load_np_data(
     labels = [int(x.split("-")[1][:3] == "PAT") for x in filenames]
     labels = np.array(labels)
 
+    # Return dataset
+    if with_filenames:
+        return np_networks, labels, filenames
     return np_networks, labels
 
 
