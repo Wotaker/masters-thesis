@@ -58,7 +58,6 @@ class ExplainWithLIME:
             self,
             x: np.ndarray,
             sub: str,
-            top_n_features: Optional[int] = None,
             save: bool = True
     ) -> np.ndarray:
 
@@ -70,7 +69,7 @@ class ExplainWithLIME:
             x,
             self.predict_fn,
             labels=(1,),
-            num_features=top_n_features if top_n_features is not None else self.top_n_features
+            num_features=self.top_n_features
         )
 
         # Extract the LIME scores and fill the heatmap
@@ -86,14 +85,13 @@ class ExplainWithLIME:
     
     def explain_testset(
         self,
-        top_n_features: Optional[int] = None,
         save: bool = True
     ) -> np.ndarray:
         
         # Explain each subject and accumulate the heatmaps
         explain_heatmap_sum = np.zeros((self.nodes, self.nodes))
         for x, sub in tqdm(zip(self.X_test_normalized_flatten, self.subject_names_test), total=len(self.X_test_normalized_flatten)):
-            explain_heatmap = self.explain_subject(x, sub, top_n_features, save)
+            explain_heatmap = self.explain_subject(x, sub, save)
             explain_heatmap_sum += explain_heatmap
 
         # Save and return the accumulated heatmap
@@ -214,7 +212,7 @@ if __name__ == "__main__":
     # Explain with LIME
     explain_with_lime = ExplainWithLIME(
         X_train_normalized,
-        X_test_normalized[:3],
+        X_test_normalized,
         subject_names_test,
         predict_proba_fn,
         experiment_dir_path,
