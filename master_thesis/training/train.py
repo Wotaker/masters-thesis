@@ -29,7 +29,8 @@ def load_dataset(dataset_name: str, dataset_config: Dict, with_filenames: bool =
     preprocesing_kwargs = dataset_config["preprocessing"]
 
     # Load and preprocess networks
-    X, y, filenames = load_np_data(networks_dir_path, channel, hem_connections, with_filenames)
+    loaded = load_np_data(networks_dir_path, channel, hem_connections, with_filenames)
+    X, y = loaded[:2]
     logging.info(f"Loaded {X.shape[0]} networks with {X.shape[1]} nodes each")
 
     # Plot sample networks
@@ -42,7 +43,7 @@ def load_dataset(dataset_name: str, dataset_config: Dict, with_filenames: bool =
     
     # Return dataset
     if with_filenames:
-        return X, y, filenames
+        return X, y, loaded[2]
     return X, y
 
 

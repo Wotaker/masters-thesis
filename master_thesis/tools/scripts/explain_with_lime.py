@@ -212,7 +212,7 @@ if __name__ == "__main__":
     # Explain with LIME
     explain_with_lime = ExplainWithLIME(
         X_train_normalized,
-        X_test_normalized,
+        X_test_normalized[:3],
         subject_names_test,
         predict_proba_fn,
         experiment_dir_path,

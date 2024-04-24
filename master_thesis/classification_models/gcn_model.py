@@ -123,14 +123,27 @@ class GCNModel(BaseModel):
         
         return loss_accum / len(dataloader.dataset), preds_accum, golds_accum
     
-    def _predict(self, dataloader: DataLoader) -> torch.Tensor:
+    # TODO I think this is the faulty code. Need to fix it.
+    def _predict(self, dataloader: DataLoader, as_probs: bool = False) -> torch.Tensor:
         self.model.eval()
+
+        # Old code
+        # y_hat = []
+        # for data in dataloader:
+        #     out = self.model(data.x, data.edge_index, data.batch)
+        #     y_hat.append(out.argmax(dim=1))
+        # y_hat = torch.cat(y_hat, dim=0)
 
         y_hat = []
         for data in dataloader:
             out = self.model(data.x, data.edge_index, data.batch)
-            y_hat.append(out.argmax(dim=1))
-        y_hat = torch.cat(y_hat, dim=0)
+            y_hat.append(out) # Here, is the append correct?
+        
+        if as_probs:
+            y_hat = torch.cat(y_hat, dim=0)
+            y_hat = F.softmax(y_hat, dim=1)
+        else:
+            y_hat = torch.cat(y_hat, dim=0).argmax(dim=1)
         
         return y_hat
     
@@ -224,7 +237,7 @@ class GCNModel(BaseModel):
                 self._log(epoch, train_loss, val_loss, train_evaluation_scores, val_evaluation_scores)
             
 
-    def predict(self, X: Union[np.ndarray, List[Graph]], dataset_config: Optional[Dict] = None) -> np.ndarray:
+    def predict(self, X: Union[np.ndarray, List[Graph]], dataset_config: Optional[Dict] = None, as_probs: bool = False) -> np.ndarray:
         
         # Load best model
         loaded = load_checkpoint(
@@ -250,4 +263,9 @@ class GCNModel(BaseModel):
         self.test_loader = DataLoader(X, batch_size=self.batch_size, shuffle=False)
 
         # Make predictions
-        return self._predict(self.test_loader).cpu().numpy()
+        if as_probs:
+            return self._predict(self.test_loader, as_probs).cpu().detach().numpy()
+        return self._predict(self.test_loader, as_probs).cpu().numpy()
+    
+    def predict_proba(self, X: np.ndarray, dataset_config: Optional[Dict] = None) -> np.ndarray:
+        return self.predict(X, dataset_config, as_probs=True)
