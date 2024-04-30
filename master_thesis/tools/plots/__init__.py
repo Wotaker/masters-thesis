@@ -8,7 +8,10 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 
 from master_thesis.classification_models.base_model import BaseModel, plot_confusion_matrix
+from master_thesis.tools.plots.config import set_style
 
+
+set_style()
 
 def draw_network(
         g: nx.DiGraph,
@@ -28,6 +31,15 @@ def plot_weight_histogram(network: nx.DiGraph, label: int, bins: int=100):
     sns.histplot(datapoint.x.numpy(), kde=True, bins=bins)
     plt.title(f"Weights distribution ({'CON' if label == 0 else 'PAT'} sample)")
     plt.show()
+
+def plot_aggregated_weight_histogram(networks: List[nx.DiGraph], xtitle: str, bins: int=100, save_path: Optional[str]=None):
+    weights = []
+    for network in networks:
+        weights += list(nx.get_edge_attributes(network, 'weight').values())
+    sns.histplot(weights, kde=False, bins=bins, stat='density')
+    plt.xlabel(xtitle)
+    plt.savefig(save_path, bbox_inches='tight') if save_path else plt.show()
+    plt.clf()
 
 
 def plot_sample_networks(
