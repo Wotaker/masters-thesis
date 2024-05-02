@@ -8,6 +8,7 @@ from master_thesis.tools.plots import *
 TIMESERIES_BEFORE_DIR = "/Users/wciezobka/sano/projects/Effective-Connectivity-Reservoir-Computing/Datasets/stroke"
 TIMESERIES_AFTER_DIR = "/Users/wciezobka/sano/projects/Effective-Connectivity-Reservoir-Computing/Datasets/stroke-split"
 RCC_NETWORKS_DIR = "/Users/wciezobka/sano/projects/masters-thesis/Datasets/NeuroFlicksUnidirRCC/networks"
+GC_NETWORKS_DIR = "/Users/wciezobka/sano/projects/masters-thesis/Datasets/NeuroFlicksGC/networks"
 
 
 def figure_methods_2(timeseries_dir_path_before: str, timeseries_dir_path_after: str, histogram_bins: int = 20):
@@ -79,7 +80,7 @@ def figure_methods_3(networks_dir_path: str, histogram_bins: int = 50):
     )(X_norm, y)
     X_processed, _ = Preprocessing(
         undirected=False,
-        connection_weight_threshold=(0.6, -0.35)
+        connection_weight_threshold=(0.25, -0.55)
     )(X_norm, y)
 
     # Generate figures
@@ -91,4 +92,4 @@ def figure_methods_3(networks_dir_path: str, histogram_bins: int = 50):
 if __name__ == "__main__":
 
     figure_methods_2(TIMESERIES_BEFORE_DIR, TIMESERIES_AFTER_DIR)
-    # figure_methods_3(RCC_NETWORKS_DIR)
+    figure_methods_3(RCC_NETWORKS_DIR)

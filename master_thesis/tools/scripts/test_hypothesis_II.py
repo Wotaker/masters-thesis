@@ -53,7 +53,7 @@ def test_hypothesis_II(results_dir: str, dataset_superior: str, dataset_inferior
 
             # Perform two-sample t-test to verify hypothesis II
             # TODO Replace with https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.mannwhitneyu.html
-            _, pval = ttest_ind(df_superior.auc.values, df_inferior.auc.values, equal_var=False)
+            _, pval = ttest_ind(df_superior.auc.values, df_inferior.auc.values, equal_var=False, alternative="greater")
 
             # Store the p-value in the comparison matrix
             comparison[i, j] = pval
