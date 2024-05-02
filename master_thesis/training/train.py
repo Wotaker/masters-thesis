@@ -238,28 +238,28 @@ def log_results(
     )
 
     # Log results
-    results = results.append({
-        "dataset": dataset_name,
-        "model": model_name,
-        "fold": fold,
-        "split": "train",
-        "accuracy": train_metrices.accuracy,
-        "precision": train_metrices.precision,
-        "recall": train_metrices.recall,
-        "f1": train_metrices.f1,
-        "auc": train_metrices.auc
-    }, ignore_index=True)
-    results = results.append({
-        "dataset": dataset_name,
-        "model": model_name,
-        "fold": fold,
-        "split": "test",
-        "accuracy": test_metrices.accuracy,
-        "precision": test_metrices.precision,
-        "recall": test_metrices.recall,
-        "f1": test_metrices.f1,
-        "auc": test_metrices.auc
-    }, ignore_index=True)
+    results = pd.concat([results, pd.DataFrame({
+        "dataset": [dataset_name],
+        "model": [model_name],
+        "fold": [fold],
+        "split": ["train"],
+        "accuracy": [train_metrices.accuracy],
+        "precision": [train_metrices.precision],
+        "recall": [train_metrices.recall],
+        "f1": [train_metrices.f1],
+        "auc": [train_metrices.auc]
+    })], ignore_index=True)
+    results = pd.concat([results, pd.DataFrame({
+        "dataset": [dataset_name],
+        "model": [model_name],
+        "fold": [fold],
+        "split": ["test"],
+        "accuracy": [test_metrices.accuracy],
+        "precision": [test_metrices.precision],
+        "recall": [test_metrices.recall],
+        "f1": [test_metrices.f1],
+        "auc": [test_metrices.auc]
+    })], ignore_index=True)
 
     return results
 
