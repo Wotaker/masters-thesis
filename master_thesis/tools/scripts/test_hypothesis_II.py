@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import ttest_ind
 
+from master_thesis.tools.plots import set_style
+
 warnings.filterwarnings("ignore")
 
 
@@ -71,15 +73,17 @@ def test_hypothesis_II(results_dir: str, dataset_superior: str, dataset_inferior
         mask=mask,
         cmap="coolwarm",
         center=pval_thr,
-        cbar_kws={"label": "p-value"},
+        cbar_kws={"label": r"$p$-value"},
         annot_kws={"fontsize": 5}
     )
     ax.figure.subplots_adjust(left=0.3, bottom=0.5)
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right")
     plt.setp(ax.yaxis.get_majorticklabels(), rotation=30, ha="right")
-    plt.xlabel(f"{dataset_inferior} (Inferior)")
-    plt.ylabel(f"{dataset_superior} (Superior)")
-    plt.savefig(os.path.join(results_dir, "hypothesis_II.pdf"), bbox_inches="tight")
+    plt.xlabel(f"{dataset_inferior}\n(Inferior)")
+    plt.ylabel(f"{dataset_superior}\n(Superior)")
+    # plt.xlabel(f"Granger Causality\n(Inferior)")
+    # plt.ylabel(f"whole-brain RCC\n(Superior)")
+    plt.savefig(os.path.join(results_dir, "hypothesis-II.pdf"), bbox_inches="tight")
     plt.clf()
 
 if __name__ == "__main__":
