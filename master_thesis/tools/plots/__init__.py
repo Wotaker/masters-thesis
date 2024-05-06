@@ -41,6 +41,24 @@ def plot_aggregated_weight_histogram(networks: List[nx.DiGraph], xtitle: str, bi
     plt.savefig(save_path, bbox_inches='tight') if save_path else plt.show()
     plt.clf()
 
+def plot_aggregated_weight_double_histogram(networks_a: List[nx.DiGraph], networks_b: List[nx.DiGraph], labels: Tuple, xtitle: str, bins: int=100, save_path: Optional[str]=None):
+
+    # Aggregate networks
+    weights_a = []
+    weights_b = []
+    for network in networks_a:
+        weights_a += list(nx.get_edge_attributes(network, 'weight').values())
+    for network in networks_b:
+        weights_b += list(nx.get_edge_attributes(network, 'weight').values())
+
+    # Plot histograms
+    sns.histplot(weights_b, kde=False, bins=bins, stat='density', color='tab:blue', alpha=0.5, label=labels[1])
+    sns.histplot(weights_a, kde=False, bins=bins, stat='density', color='tab:orange', alpha=0.5, label=labels[0])
+
+    plt.xlabel(xtitle)
+    plt.legend()
+    plt.savefig(save_path, bbox_inches='tight') if save_path else plt.show()
+    plt.clf()
 
 def plot_sample_networks(
     networks: List[nx.DiGraph],

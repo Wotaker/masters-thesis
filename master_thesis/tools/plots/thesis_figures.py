@@ -10,6 +10,9 @@ TIMESERIES_AFTER_DIR = "/Users/wciezobka/sano/projects/Effective-Connectivity-Re
 RCC_NETWORKS_DIR = "/Users/wciezobka/sano/projects/masters-thesis/Datasets/NeuroFlicksUnidirRCC/networks"
 GC_NETWORKS_DIR = "/Users/wciezobka/sano/projects/masters-thesis/Datasets/NeuroFlicksGC/networks"
 
+RCC_THRESHOLDS = (0.6, -0.35)
+GC_THRESHOLDS = (0.25, -0.55)
+
 
 def figure_methods_2(timeseries_dir_path_before: str, timeseries_dir_path_after: str, histogram_bins: int = 20):
 
@@ -61,35 +64,59 @@ def figure_methods_2(timeseries_dir_path_before: str, timeseries_dir_path_after:
     dataset_histogram(timeseries_dir_path_after, legend_location="upper right", save_path="methods_2b.pdf")
 
 
-def figure_methods_3(networks_dir_path: str, histogram_bins: int = 50):
+def figure_methods_3(histogram_bins: int = 50):
 
     # Load raw numpy networks
-    X, y = load_np_data(networks_dir_path, channel=0)
-    X, y = np.array(X), np.array(y)
+    # - for RCC
+    X_rcc, y_rcc = load_np_data(RCC_NETWORKS_DIR, channel=0)
+    X_rcc, y_rcc = np.array(X_rcc), np.array(y_rcc)
+
+    # - for GC
+    X_gc, y_gc = load_np_data(GC_NETWORKS_DIR, channel=0)
+    X_gc, y_gc = np.array(X_gc), np.array(y_gc)
 
     # Subtract control mean
-    control_mean = X[y == 0].mean(axis=0)
-    X_norm = X - control_mean
+    # - for RCC
+    control_mean_rcc = X_rcc[y_rcc == 0].mean(axis=0)
+    X_norm_rcc = X_rcc - control_mean_rcc
+
+    # - for GC
+    control_mean_gc = X_gc[y_gc == 0].mean(axis=0)
+    X_norm_gc = X_gc - control_mean_gc
 
     # Preprocess data
-    X_raw, _ = Preprocessing(
+    # - for RCC
+    X_raw_rcc, _ = Preprocessing(
         undirected=False,
-    )(X, y)
-    X_normalized, _ = Preprocessing(
+    )(X_rcc, y_rcc)
+    X_normalized_rcc, _ = Preprocessing(
         undirected=False,
-    )(X_norm, y)
-    X_processed, _ = Preprocessing(
+    )(X_norm_rcc, y_rcc)
+    X_processed_rcc, _ = Preprocessing(
         undirected=False,
-        connection_weight_threshold=(0.25, -0.55)
-    )(X_norm, y)
+        connection_weight_threshold=RCC_THRESHOLDS
+    )(X_norm_rcc, y_rcc)
+
+    # - for GC
+    X_raw_gc, _ = Preprocessing(
+        undirected=False,
+    )(X_gc, y_gc)
+    X_normalized_gc, _ = Preprocessing(
+        undirected=False,
+    )(X_norm_gc, y_gc)
+    X_processed_gc, _ = Preprocessing(
+        undirected=False,
+        connection_weight_threshold=GC_THRESHOLDS
+    )(X_norm_gc, y_gc)
 
     # Generate figures
-    plot_aggregated_weight_histogram(X_raw, bins=histogram_bins, xtitle="Edge weight", save_path="methods_3a.pdf")
-    plot_aggregated_weight_histogram(X_normalized, bins=histogram_bins, xtitle="Edge weight", save_path="methods_3b.pdf")
-    plot_aggregated_weight_histogram(X_processed, bins=histogram_bins, xtitle="Edge weight", save_path="methods_3c.pdf")
+    labels = ("whole-brain RCC", "Granger Causality")
+    plot_aggregated_weight_double_histogram(X_raw_rcc, X_raw_gc, labels, bins=histogram_bins, xtitle="Edge weight", save_path="methods_3a.pdf")
+    plot_aggregated_weight_double_histogram(X_normalized_rcc, X_normalized_gc, labels, bins=histogram_bins, xtitle="Edge weight", save_path="methods_3b.pdf")
+    plot_aggregated_weight_double_histogram(X_processed_rcc, X_processed_gc, labels, bins=histogram_bins, xtitle="Edge weight", save_path="methods_3c.pdf")
 
 
 if __name__ == "__main__":
 
     figure_methods_2(TIMESERIES_BEFORE_DIR, TIMESERIES_AFTER_DIR)
-    figure_methods_3(RCC_NETWORKS_DIR)
+    figure_methods_3()
