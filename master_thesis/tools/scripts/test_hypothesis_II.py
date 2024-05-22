@@ -13,7 +13,7 @@ from master_thesis.tools.plots import set_style
 warnings.filterwarnings("ignore")
 
 
-def test_hypothesis_II(results_dir: str, dataset_superior: str, dataset_inferior: str, pval_thr: float = 0.05):
+def test_hypothesis_II(results_dir: str, dataset_superior: str, dataset_inferior: str, pval_thr: float = 0.05, use_mapping: bool = True):
     """
     Hypothesis II: The AUC of the model trained on the RCC-based EC networks is significantly greater than
     the AUC of the model trained on the Granger-based EC networks. In other words, the whole-brain RCC method
@@ -30,6 +30,11 @@ def test_hypothesis_II(results_dir: str, dataset_superior: str, dataset_inferior
     pval_thr : float, optional
         The p-value threshold for statistical significance, by default 0.05.
     """
+
+    mapping = {
+        "stroke_RCC": "RCC",
+        "stroke_GC": "GC",
+    }
     
     # Load the results from the CSV file
     results_file = os.path.join(results_dir, "results.csv")
@@ -41,7 +46,7 @@ def test_hypothesis_II(results_dir: str, dataset_superior: str, dataset_inferior
     ]
 
     # Create an empty array to store the results
-    models = results_df.model.unique()
+    models = sorted(results_df.model.unique(), reverse=True)
     comparison = np.zeros((len(models), len(models)))
     mask = np.logical_not(np.diag(np.ones(len(models), dtype=bool)))
 
@@ -59,6 +64,9 @@ def test_hypothesis_II(results_dir: str, dataset_superior: str, dataset_inferior
 
             # Store the p-value in the comparison matrix
             comparison[i, j] = pval
+
+            # Print the results
+            print(f"{model_superior} vs. {model_inferior}: p-value = {pval}")
     
     # Plot the comparison matrix
     ax = sns.heatmap(
@@ -73,16 +81,15 @@ def test_hypothesis_II(results_dir: str, dataset_superior: str, dataset_inferior
         mask=mask,
         cmap="coolwarm",
         center=pval_thr,
+        # cbar=False,
         cbar_kws={"label": r"$p$-value"},
-        annot_kws={"fontsize": 5}
+        annot_kws={"fontsize": 3}
     )
     ax.figure.subplots_adjust(left=0.3, bottom=0.5)
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right")
     plt.setp(ax.yaxis.get_majorticklabels(), rotation=30, ha="right")
-    plt.xlabel(f"{dataset_inferior}\n(Inferior)")
-    plt.ylabel(f"{dataset_superior}\n(Superior)")
-    # plt.xlabel(f"Granger Causality\n(Inferior)")
-    # plt.ylabel(f"whole-brain RCC\n(Superior)")
+    plt.xlabel(f"Inferior {mapping[dataset_inferior]}")
+    plt.ylabel(f"Superior {mapping[dataset_superior]}")
     plt.savefig(os.path.join(results_dir, "hypothesis-II.pdf"), bbox_inches="tight")
     plt.clf()
 
