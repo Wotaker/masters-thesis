@@ -268,4 +268,5 @@ class GCNModel(BaseModel):
         return self._predict(self.test_loader, as_probs).cpu().numpy()
     
     def predict_proba(self, X: np.ndarray, dataset_config: Optional[Dict] = None) -> np.ndarray:
+        X = X.reshape(-1, 100, 100)
         return self.predict(X, dataset_config, as_probs=True)

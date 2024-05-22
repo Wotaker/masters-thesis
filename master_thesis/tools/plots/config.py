@@ -9,7 +9,7 @@ PLOT_PARAMS = {
     'figure.dpi': 72,
     'font.size': 9,
     'font.family': 'serif',
-    'font.serif': 'cm',
+    'font.serif': ["Times"],
     'axes.titlesize': 9,
     'axes.linewidth': 0.5,
     'grid.alpha': 0.42,
