@@ -4,6 +4,7 @@ import numpy as np
 COLUMN_WIDTH = 3.5
 COLUMN_HIGHT = 2 * COLUMN_WIDTH / (1 + 5 ** 0.5)
 
+DEFAULT_PLOT_PARAMS = plt.rcParams.copy()
 PLOT_PARAMS = {
     'figure.figsize': (COLUMN_WIDTH, COLUMN_HIGHT),
     'figure.dpi': 72,
@@ -32,6 +33,9 @@ AGENT_NAMES = {
 
 def set_style() -> None:
     plt.rcParams.update(PLOT_PARAMS)
+
+def reset_style() -> None:
+    plt.rcParams.update(DEFAULT_PLOT_PARAMS)
 
 
 def get_cmap(n: int) -> plt.cm:

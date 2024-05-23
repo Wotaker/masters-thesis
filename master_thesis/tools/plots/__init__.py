@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 
 from master_thesis.classification_models.base_model import BaseModel, plot_confusion_matrix
-from master_thesis.tools.plots.config import set_style
+from master_thesis.tools.plots.config import set_style, reset_style
 
 
 set_style()
