@@ -2,19 +2,17 @@ import glob
 import brainstat.datasets
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import brainstat
 import brainstat.datasets as datasets
 
 from argparse import ArgumentParser
-from matplotlib.cm import ScalarMappable
 from brainstat.datasets import fetch_yeo_networks_metadata
-from brainstat.datasets import fetch_parcellation
 from brainspace.utils.parcellation import map_to_labels
 from brainstat.context.resting import yeo_networks_associations
 from surfplot import Plot
 
 from master_thesis.tools.plots.config import set_style, reset_style, COLUMN_HIGHT, COLUMN_WIDTH
+
 
 LEFT_HEMISPHERE, RIGHT_HEMISPHERE = brainstat.datasets.fetch_template_surface('fsaverage5', join=False)
 
@@ -35,10 +33,8 @@ def plot_interpretation(explenations_array: np.ndarray, stroke: bool, n_stds: fl
 
     # Count connection with importance greater than the threshold
     if stroke:
-        # print(mean + n_stds * std)
         thresholded = np.logical_and(explenations_summed > mean + n_stds * std, explenations_summed != 0)
     else:
-        # print(mean - n_stds * std)
         thresholded = np.logical_and(explenations_summed < mean - n_stds * std, explenations_summed != 0)
     important_edges = np.where(thresholded, 1, 0)
     print(f"({suffix}) Ratio of important edges: {important_edges.sum() / 100}%")
@@ -76,10 +72,8 @@ def plot_interpretation(explenations_array: np.ndarray, stroke: bool, n_stds: fl
         error_kw={"elinewidth": 5},
     )
     ax.set_xticks(np.arange(7), network_names, rotation=90)
-    # ax.set_yticks(fontsize=14)
     ax.set_ylabel("Mean degree")
     plt.savefig(f"xai_yeo_{suffix}.pdf", bbox_inches="tight")
-    # plt.gcf().subplots_adjust(left=0.2, bottom=0.5)
     plt.clf()
 
 
